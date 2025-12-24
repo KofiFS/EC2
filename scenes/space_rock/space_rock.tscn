@@ -1,0 +1,78 @@
+[gd_scene load_steps=5 format=3 uid="uid://c4xk8m7qv2wjd"]
+
+[ext_resource type="Script" path="res://scripts/player/space_rock.gd" id="1_space_rock"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_bounce"]
+bounce = 0.5
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_collision"]
+radius = 40.0
+
+[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_sync"]
+properties/0/path = NodePath(".:position")
+properties/0/spawn = true
+properties/0/replication_mode = 1
+properties/1/path = NodePath(".:linear_velocity")
+properties/1/spawn = true
+properties/1/replication_mode = 1
+properties/2/path = NodePath(".:current_damage")
+properties/2/spawn = true
+properties/2/replication_mode = 1
+
+[node name="SpaceRock" type="RigidBody2D"]
+collision_layer = 1
+collision_mask = 3
+mass = 5.0
+gravity_scale = 0.0
+linear_damp = 0.0
+angular_damp = 0.5
+physics_material_override = SubResource("PhysicsMaterial_bounce")
+continuous_cd = 2
+contact_monitor = true
+max_contacts_reported = 4
+script = ExtResource("1_space_rock")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_collision")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+
+[node name="Visual" type="Polygon2D" parent="Sprite2D"]
+color = Color(0.4, 0.6, 1, 1)
+polygon = PackedVector2Array(40, 0, 38.04, 12.36, 32.36, 23.51, 23.51, 32.36, 12.36, 38.04, 0, 40, -12.36, 38.04, -23.51, 32.36, -32.36, 23.51, -38.04, 12.36, -40, 0, -38.04, -12.36, -32.36, -23.51, -23.51, -32.36, -12.36, -38.04, 0, -40, 12.36, -38.04, 23.51, -32.36, 32.36, -23.51, 38.04, -12.36)
+
+[node name="InnerRing" type="Polygon2D" parent="Sprite2D"]
+color = Color(0.3, 0.5, 0.9, 0.5)
+polygon = PackedVector2Array(30, 0, 28.53, 9.27, 24.27, 17.63, 17.63, 24.27, 9.27, 28.53, 0, 30, -9.27, 28.53, -17.63, 24.27, -24.27, 17.63, -28.53, 9.27, -30, 0, -28.53, -9.27, -24.27, -17.63, -17.63, -24.27, -9.27, -28.53, 0, -30, 9.27, -28.53, 17.63, -24.27, 24.27, -17.63, 28.53, -9.27)
+
+[node name="Highlight" type="Polygon2D" parent="Sprite2D"]
+position = Vector2(-10, -10)
+color = Color(0.8, 0.9, 1, 0.6)
+polygon = PackedVector2Array(12, 0, 10.39, 6, 6, 10.39, 0, 12, -6, 10.39, -10.39, 6, -12, 0, -10.39, -6, -6, -10.39, 0, -12, 6, -10.39, 10.39, -6)
+
+[node name="Trail" type="CPUParticles2D" parent="."]
+z_index = -1
+emitting = true
+amount = 30
+lifetime = 0.5
+speed_scale = 2.0
+local_coords = false
+emission_shape = 1
+emission_sphere_radius = 10.0
+direction = Vector2(0, 0)
+spread = 180.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 5.0
+initial_velocity_max = 20.0
+scale_amount_min = 8.0
+scale_amount_max = 15.0
+scale_amount_curve = null
+color = Color(0.4, 0.6, 1, 0.7)
+
+[node name="Camera2D" type="Camera2D" parent="."]
+zoom = Vector2(0.75, 0.75)
+position_smoothing_enabled = true
+position_smoothing_speed = 5.0
+
+[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
+replication_config = SubResource("SceneReplicationConfig_sync")

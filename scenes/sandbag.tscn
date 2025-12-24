@@ -1,0 +1,50 @@
+[gd_scene load_steps=4 format=3 uid="uid://sandbag_scene_ec2"]
+
+[ext_resource type="Script" path="res://scripts/sandbag.gd" id="1_sandbag"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_collision"]
+radius = 60.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_hitarea"]
+radius = 65.0
+
+[node name="Sandbag" type="StaticBody2D"]
+collision_layer = 2
+collision_mask = 1
+script = ExtResource("1_sandbag")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_collision")
+
+[node name="Visual" type="Polygon2D" parent="."]
+color = Color(0.6, 0.5, 0.3, 1)
+polygon = PackedVector2Array(-50, -40, -30, -55, 30, -55, 50, -40, 55, 20, 40, 50, -40, 50, -55, 20)
+
+[node name="Stripes" type="Polygon2D" parent="."]
+color = Color(0.45, 0.35, 0.2, 1)
+polygon = PackedVector2Array(-45, -20, 45, -20, 45, -10, -45, -10)
+
+[node name="Stripes2" type="Polygon2D" parent="."]
+color = Color(0.45, 0.35, 0.2, 1)
+polygon = PackedVector2Array(-45, 10, 45, 10, 45, 20, -45, 20)
+
+[node name="HitArea" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HitArea"]
+shape = SubResource("CircleShape2D_hitarea")
+
+[node name="TotalLabel" type="Label" parent="."]
+offset_left = -80.0
+offset_top = 60.0
+offset_right = 80.0
+offset_bottom = 90.0
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 0.8)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 18
+text = "Total: 0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
