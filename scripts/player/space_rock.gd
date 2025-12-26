@@ -127,11 +127,8 @@ func _ready() -> void:
 
 func _setup_visuals() -> void:
 	"""Set up the rock's visual appearance."""
-	# Check if customization was already applied
-	var has_customization = has_meta("customization")
-	
-	# Generate a random bright color (skip for AI - they have preset colors, and skip if customization exists)
-	if not is_ai_controlled and not has_customization:
+	# Generate a random bright color (skip for AI - they have preset colors)
+	if not is_ai_controlled:
 		rock_color = Color.from_hsv(randf(), 0.7, 1.0)
 		if sprite:
 			sprite.modulate = rock_color
@@ -448,43 +445,4 @@ func _update_rotation(delta: float) -> void:
 		pass
 
 
-
-func apply_customization(customization: Dictionary) -> void:
-	"""Apply customization settings to this rock."""
-	print("[SpaceRock] Applying customization: ", customization)
-	
-	# Store customization data first
-	set_meta("customization", customization)
-	
-	if customization.has("color"):
-		rock_color = customization["color"]
-		print("[SpaceRock] Setting color to: ", rock_color)
-		
-		# Update sprite color
-		if sprite:
-			sprite.modulate = rock_color
-			print("[SpaceRock] Sprite modulate set")
-		
-		# Update particle colors - make sure particles_container is ready
-		if not particles_container:
-			particles_container = get_node_or_null("Particles")
-		
-		if particles_container:
-			# Re-collect trails if needed
-			if all_trails.is_empty():
-				for child in particles_container.get_children():
-					if child is CPUParticles2D:
-						all_trails.append(child)
-			
-			for trail in all_trails:
-				if trail:
-					var trail_color = rock_color
-					trail_color.a = 0.7
-					trail.color = trail_color
-					print("[SpaceRock] Trail color set: ", trail_color)
-	
-	# Apply body shape if needed (future implementation)
-	if customization.has("body_shape"):
-		# TODO: Implement body shape changes
-		pass
 

@@ -5,9 +5,7 @@ extends Control
 @onready var address_input: LineEdit = $Panel/VBoxContainer/AddressInput
 @onready var host_button: Button = $Panel/VBoxContainer/HostButton
 @onready var join_button: Button = $Panel/VBoxContainer/JoinButton
-@onready var customize_button: Button = $Panel/VBoxContainer/CustomizeButton
 @onready var status_label: Label = $Panel/VBoxContainer/StatusLabel
-@onready var customize_menu: Control = $CustomizeMenu
 
 
 func _ready() -> void:
@@ -74,12 +72,6 @@ func _hide_lobby() -> void:
 	# Fade out or just hide
 	await get_tree().create_timer(0.5).timeout
 	visible = false
-
-
-func _on_customize_pressed() -> void:
-	"""Open the customization menu."""
-	if customize_menu:
-		customize_menu.show_menu()
 
 
 func show_lobby() -> void:

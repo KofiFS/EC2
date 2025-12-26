@@ -2,3 +2,5 @@ res://shaders/bubble_effect.gdshader
 res://scripts/player/space_rock.gd
 res://scenes/space_rock/space_rock.tscn
 res://scenes/ai_rock.tscn
+res://scripts/autoloads/game_manager.gd
+res://scripts/ui/lobby.gd

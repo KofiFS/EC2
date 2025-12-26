@@ -20,7 +20,6 @@ config/icon="res://icon.svg"
 
 NetworkManager="*res://scripts/autoloads/network_manager.gd"
 GameManager="*res://scripts/autoloads/game_manager.gd"
-CustomizationManager="*res://scripts/autoloads/customization_manager.gd"
 
 [display]
 
