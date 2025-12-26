@@ -9,10 +9,10 @@ class_name SpaceRock
 @export var max_velocity: float = 2000.0  # High max speed
 
 # Sonic Boom configuration
-@export var sonic_boom_multiplier: float = 5.0  # 5x boost per charge tick
-@export var sonic_boom_interval: float = 0.05  # Charge builds every 0.05 seconds
+@export var sonic_boom_multiplier: float = 10.0  # 10x boost per charge tick
+@export var sonic_boom_interval: float = 0.25  # Charge builds every 0.25 seconds
 @export var sonic_boom_max_velocity: float = 4000.0  # Higher cap after blast
-@export var sonic_boom_max_charge_time: float = 2.5  # Max charge duration in seconds
+@export var sonic_boom_max_charge_time: float = 1.25  # Max charge duration in seconds
 
 # Damage configuration  
 @export var max_health: float = 1000.0
@@ -44,7 +44,23 @@ signal rock_destroyed
 @onready var sprite: Sprite2D = $Sprite2D
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 @onready var camera: Camera2D = $Camera2D
-@onready var trail: CPUParticles2D = $Trail
+@onready var particles_container: Node2D = $Particles
+@onready var visual_polygon: Polygon2D = $Sprite2D/Visual
+var all_trails: Array[CPUParticles2D] = []
+
+# Squash & stretch physics
+@export var stretch_intensity: float = 1.5  # How much to stretch (1.0 = no stretch)
+@export var squash_intensity: float = 0.7  # How much to squash perpendicular (1.0 = no squash)
+@export var deformation_speed: float = 0.2  # Interpolation speed (0.0-1.0) - matches example
+@export var max_velocity_for_stretch: float = 2000.0  # Velocity at which max stretch occurs
+@export var wobble_intensity: float = 0.05  # Idle wobble amount
+@export var wobble_speed: float = 3.0  # Idle wobble speed
+
+var current_scale_x: float = 1.0
+var current_scale_y: float = 1.0
+var target_scale_x: float = 1.0
+var target_scale_y: float = 1.0
+var deform_angle: float = 0.0  # Store the deformation angle separately from sprite rotation
 
 
 func _ready() -> void:
@@ -58,6 +74,43 @@ func _ready() -> void:
 	if camera:
 		camera.enabled = is_multiplayer_authority() and not is_ai_controlled
 	
+	# Collect all particle systems
+	if particles_container:
+		for child in particles_container.get_children():
+			if child is CPUParticles2D:
+				all_trails.append(child)
+	
+	# Get visual polygon reference for squash/stretch
+	if not visual_polygon:
+		visual_polygon = get_node_or_null("Sprite2D/Visual")
+		if visual_polygon:
+			print("[SpaceRock] Found visual polygon for squash/stretch")
+			# Verify the material is set up correctly
+			if visual_polygon.material:
+				print("[SpaceRock] Visual polygon has material: ", visual_polygon.material)
+				if visual_polygon.material is ShaderMaterial:
+					var shader = (visual_polygon.material as ShaderMaterial).shader
+					print("[SpaceRock] Material is ShaderMaterial with shader: ", shader)
+					if shader:
+						print("[SpaceRock] Shader resource path: ", shader.resource_path)
+			else:
+				print("[SpaceRock] WARNING: Visual polygon has no material!")
+		else:
+			print("[SpaceRock] WARNING: Could not find visual polygon!")
+	
+	# Initialize squash/stretch values
+	current_scale_x = 1.0
+	current_scale_y = 1.0
+	target_scale_x = 1.0
+	target_scale_y = 1.0
+	
+	# Initialize visual polygon scale and make sure it's visible
+	if visual_polygon:
+		visual_polygon.scale = Vector2(1.0, 1.0)
+		visual_polygon.rotation = 0.0
+		visual_polygon.visible = true  # Ensure it's visible
+		print("[SpaceRock] Initialized visual polygon - Scale: ", visual_polygon.scale, " Visible: ", visual_polygon.visible, " Color: ", visual_polygon.color)
+	
 	# Randomize color for this rock
 	_setup_visuals()
 	
@@ -66,32 +119,47 @@ func _ready() -> void:
 	
 	# Configure physics
 	gravity_scale = 0.0  # No gravity in space
+	lock_rotation = true  # Lock rotation to prevent spinning from collisions
+	# We'll manually control rotation based on movement direction
 	
 	print("[SpaceRock] Ready - AI: ", is_ai_controlled, ", Authority: ", get_multiplayer_authority())
 
 
 func _setup_visuals() -> void:
 	"""Set up the rock's visual appearance."""
-	# Generate a random bright color (skip for AI - they have preset colors)
-	if not is_ai_controlled:
+	# Check if customization was already applied
+	var has_customization = has_meta("customization")
+	
+	# Generate a random bright color (skip for AI - they have preset colors, and skip if customization exists)
+	if not is_ai_controlled and not has_customization:
 		rock_color = Color.from_hsv(randf(), 0.7, 1.0)
 		if sprite:
 			sprite.modulate = rock_color
 	
-	# Set trail color to match rock
-	if trail:
-		var trail_color = rock_color if not is_ai_controlled else Color(1, 0.3, 0.3, 1)
-		trail_color.a = 0.7  # Semi-transparent trail
-		trail.color = trail_color
+	# Set trail color to match rock for all particle systems
+	var trail_color = rock_color if not is_ai_controlled else Color(1, 0.3, 0.3, 1)
+	trail_color.a = 0.7  # Semi-transparent trail
+	
+	for trail in all_trails:
+		if trail:
+			trail.color = trail_color
 
 
 func _physics_process(delta: float) -> void:
+	# Prevent spinning from collisions - lock rotation and zero angular velocity
+	lock_rotation = true
+	angular_velocity = 0.0
+	
 	# Skip input processing for AI-controlled rocks
 	if is_ai_controlled:
+		_update_squash_stretch(delta)
+		_update_rotation(delta)
 		return
 	
 	# Only process input for the local player
 	if not is_multiplayer_authority():
+		_update_squash_stretch(delta)
+		_update_rotation(delta)
 		return
 	
 	# Get input direction
@@ -108,6 +176,7 @@ func _physics_process(delta: float) -> void:
 		# Track the direction player wants to blast
 		if input_direction != Vector2.ZERO:
 			charge_direction = input_direction.normalized()
+		_update_squash_stretch(delta)
 		return  # Skip normal movement while charging
 	
 	# Normal movement when not charging
@@ -123,6 +192,9 @@ func _physics_process(delta: float) -> void:
 	# Decay the blast state when velocity drops below normal max
 	if just_blasted and linear_velocity.length() <= max_velocity:
 		just_blasted = false
+	
+	# Update squash & stretch animation
+	_update_squash_stretch(delta)
 
 
 func _handle_sonic_boom(delta: float, input_direction: Vector2) -> void:
@@ -280,9 +352,10 @@ func _die() -> void:
 	
 	rock_destroyed.emit()
 	
-	# Notify game manager (server-side or single-player)
+	# Only notify game manager for player deaths, not AI deaths
+	# AI deaths are handled separately in main.gd via rock_destroyed signal
 	var is_singleplayer = multiplayer.multiplayer_peer == null or multiplayer.multiplayer_peer is OfflineMultiplayerPeer
-	if is_singleplayer or multiplayer.is_server():
+	if not is_ai_controlled and (is_singleplayer or multiplayer.is_server()):
 		GameManager.player_died.emit(get_multiplayer_authority())
 	
 	# Remove from scene
@@ -299,4 +372,119 @@ func get_damage_percent() -> float:
 func heal(amount: float) -> void:
 	"""Heal the rock by reducing damage."""
 	current_damage = max(0.0, current_damage - amount)
+
+
+func _update_squash_stretch(delta: float) -> void:
+	"""Update squash and stretch animation based on velocity."""
+	if not sprite:
+		return
+	
+	var velocity = linear_velocity
+	var velocity_magnitude = velocity.length()
+	var max_velocity = max_velocity_for_stretch
+	var velocity_ratio = clamp(velocity_magnitude / max_velocity, 0.0, 1.0)
+	
+	# Calculate target scale based on velocity
+	if velocity_magnitude > 10.0:
+		# Moving - calculate deformation angle from velocity direction
+		deform_angle = velocity.angle()
+		
+		# Stretch in direction of movement, squash perpendicular
+		target_scale_x = 1.0 + (stretch_intensity - 1.0) * velocity_ratio
+		target_scale_y = 1.0 - (1.0 - squash_intensity) * velocity_ratio
+	else:
+		# Idle - return to normal with subtle wobble
+		# Keep the last deformation angle when idle
+		var wobble = sin(Time.get_ticks_msec() * 0.003 * wobble_speed) * wobble_intensity
+		target_scale_x = 1.0 + wobble
+		target_scale_y = 1.0 - wobble
+		velocity_ratio = 0.0
+	
+	# Smooth interpolation (simple lerp like the example)
+	current_scale_x = lerp(current_scale_x, target_scale_x, deformation_speed)
+	current_scale_y = lerp(current_scale_y, target_scale_y, deformation_speed)
+	
+	# Apply directional squash/stretch using Transform2D
+	# This stretches in the velocity direction without rotating the sprite
+	sprite.scale = Vector2(1.0, 1.0)  # Reset base scale
+	
+	# Create directional stretch vectors
+	var stretch_dir = Vector2.RIGHT.rotated(deform_angle)
+	var perp_dir = Vector2.UP.rotated(deform_angle)
+	
+	# Build custom transform for directional squash/stretch
+	var transform_2d = Transform2D(
+		stretch_dir * current_scale_x,  # X-axis (stretch direction)
+		perp_dir * current_scale_y,     # Y-axis (perpendicular)
+		Vector2.ZERO
+	)
+	
+	sprite.transform = transform_2d
+	
+	# Update shader parameters for bubble effect
+	if visual_polygon and visual_polygon.material and visual_polygon.material is ShaderMaterial:
+		var shader_mat = visual_polygon.material as ShaderMaterial
+		var velocity_dir = velocity.normalized() if velocity_magnitude > 10.0 else Vector2.RIGHT
+		shader_mat.set_shader_parameter("velocity_direction", velocity_dir)
+		shader_mat.set_shader_parameter("velocity_magnitude", velocity_ratio)
+		shader_mat.set_shader_parameter("stretch_intensity", stretch_intensity)
+		shader_mat.set_shader_parameter("squash_intensity", squash_intensity)
+		shader_mat.set_shader_parameter("wobble_intensity", wobble_intensity)
+
+
+func _update_rotation(delta: float) -> void:
+	"""Update rotation to face movement direction (manual control, not physics)."""
+	var velocity = linear_velocity
+	var velocity_magnitude = velocity.length()
+	
+	if velocity_magnitude > 10.0:
+		# Rotate to face movement direction
+		var target_angle = velocity.angle()
+		# Smoothly rotate towards target angle
+		# Since lock_rotation is true, we need to manually set rotation
+		rotation = lerp_angle(rotation, target_angle, 0.2)
+	else:
+		# When idle, keep current rotation (don't snap back)
+		pass
+
+
+
+func apply_customization(customization: Dictionary) -> void:
+	"""Apply customization settings to this rock."""
+	print("[SpaceRock] Applying customization: ", customization)
+	
+	# Store customization data first
+	set_meta("customization", customization)
+	
+	if customization.has("color"):
+		rock_color = customization["color"]
+		print("[SpaceRock] Setting color to: ", rock_color)
+		
+		# Update sprite color
+		if sprite:
+			sprite.modulate = rock_color
+			print("[SpaceRock] Sprite modulate set")
+		
+		# Update particle colors - make sure particles_container is ready
+		if not particles_container:
+			particles_container = get_node_or_null("Particles")
+		
+		if particles_container:
+			# Re-collect trails if needed
+			if all_trails.is_empty():
+				for child in particles_container.get_children():
+					if child is CPUParticles2D:
+						all_trails.append(child)
+			
+			for trail in all_trails:
+				if trail:
+					var trail_color = rock_color
+					trail_color.a = 0.7
+					trail.color = trail_color
+					print("[SpaceRock] Trail color set: ", trail_color)
+	
+	# Apply body shape if needed (future implementation)
+	if customization.has("body_shape"):
+		# TODO: Implement body shape changes
+		pass
 

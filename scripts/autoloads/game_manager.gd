@@ -63,9 +63,14 @@ func spawn_player(peer_id: int) -> void:
 	var spawn_index = randi() % spawn_points.size()
 	rock.position = spawn_points[spawn_index]
 	
-	# Add to scene tree
+	# Add to scene tree first so nodes are ready
 	player_spawn_container.add_child(rock, true)
 	players[peer_id] = rock
+	
+	# Apply customization after node is ready (use call_deferred to ensure _ready has run)
+	if has_node("/root/CustomizationManager"):
+		var customization = get_node("/root/CustomizationManager").get_customization()
+		rock.call_deferred("apply_customization", customization)
 	
 	print("[GameManager] Spawned player ", peer_id, " at ", rock.position)
 	player_spawned.emit(peer_id, rock)

@@ -1,14 +1,33 @@
-[gd_scene load_steps=6 format=3 uid="uid://ai_rock_ec2"]
+[gd_scene load_steps=8 format=3 uid="uid://ai_rock_ec2"]
 
 [ext_resource type="Script" path="res://scripts/player/space_rock.gd" id="1_space_rock"]
 [ext_resource type="Script" path="res://scripts/ai_controller.gd" id="2_ai"]
 [ext_resource type="Script" path="res://scripts/health_bar.gd" id="3_healthbar"]
+[ext_resource type="Shader" path="res://shaders/space_rock_3d.gdshader" id="4_shader"]
+[ext_resource type="Shader" path="res://shaders/bubble_effect.gdshader" id="5_bubble"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_bounce"]
 bounce = 0.5
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_collision"]
 radius = 40.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_3d"]
+shader = ExtResource("4_shader")
+shader_parameter/light_intensity = 1.2
+shader_parameter/shadow_intensity = 0.4
+shader_parameter/rim_power = 2.0
+shader_parameter/rim_intensity = 0.6
+shader_parameter/light_direction = Vector3(0.5, -0.7, 0.5)
+shader_parameter/rim_color = Vector3(1, 1, 1)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_bubble"]
+shader = ExtResource("5_bubble")
+shader_parameter/bubble_intensity = 0.85
+shader_parameter/highlight_size = 0.25
+shader_parameter/highlight_intensity = 0.9
+shader_parameter/highlight_position = Vector2(-0.3, -0.3)
+shader_parameter/animation_speed = 1.0
 
 [node name="AIRock" type="RigidBody2D"]
 collision_layer = 1
@@ -29,6 +48,7 @@ shape = SubResource("CircleShape2D_collision")
 [node name="Sprite2D" type="Sprite2D" parent="."]
 
 [node name="Visual" type="Polygon2D" parent="Sprite2D"]
+material = SubResource("ShaderMaterial_bubble")
 color = Color(1, 0.3, 0.3, 1)
 polygon = PackedVector2Array(40, 0, 38.04, 12.36, 32.36, 23.51, 23.51, 32.36, 12.36, 38.04, 0, 40, -12.36, 38.04, -23.51, 32.36, -32.36, 23.51, -38.04, 12.36, -40, 0, -38.04, -12.36, -32.36, -23.51, -23.51, -32.36, -12.36, -38.04, 0, -40, 12.36, -38.04, 23.51, -32.36, 32.36, -23.51, 38.04, -12.36)
 
@@ -36,24 +56,11 @@ polygon = PackedVector2Array(40, 0, 38.04, 12.36, 32.36, 23.51, 23.51, 32.36, 12
 color = Color(0.8, 0.2, 0.2, 0.5)
 polygon = PackedVector2Array(30, 0, 28.53, 9.27, 24.27, 17.63, 17.63, 24.27, 9.27, 28.53, 0, 30, -9.27, 28.53, -17.63, 24.27, -24.27, 17.63, -28.53, 9.27, -30, 0, -28.53, -9.27, -24.27, -17.63, -17.63, -24.27, -9.27, -28.53, 0, -30, 9.27, -28.53, 17.63, -24.27, 24.27, -17.63, 28.53, -9.27)
 
-[node name="Highlight" type="Polygon2D" parent="Sprite2D"]
-position = Vector2(-10, -10)
-color = Color(1, 0.7, 0.7, 0.6)
-polygon = PackedVector2Array(12, 0, 10.39, 6, 6, 10.39, 0, 12, -6, 10.39, -10.39, 6, -12, 0, -10.39, -6, -6, -10.39, 0, -12, 6, -10.39, 10.39, -6)
+[node name="Particles" type="Node2D" parent="."]
 
-[node name="EyeLeft" type="Polygon2D" parent="Sprite2D"]
-position = Vector2(-12, -5)
-color = Color(0.1, 0.1, 0.1, 1)
-polygon = PackedVector2Array(6, 0, 5.2, 3, 3, 5.2, 0, 6, -3, 5.2, -5.2, 3, -6, 0, -5.2, -3, -3, -5.2, 0, -6, 3, -5.2, 5.2, -3)
-
-[node name="EyeRight" type="Polygon2D" parent="Sprite2D"]
-position = Vector2(12, -5)
-color = Color(0.1, 0.1, 0.1, 1)
-polygon = PackedVector2Array(6, 0, 5.2, 3, 3, 5.2, 0, 6, -3, 5.2, -5.2, 3, -6, 0, -5.2, -3, -3, -5.2, 0, -6, 3, -5.2, 5.2, -3)
-
-[node name="Trail" type="CPUParticles2D" parent="."]
+[node name="TrailCenter" type="CPUParticles2D" parent="Particles"]
 z_index = -1
-emitting = true
+emitting = false
 amount = 30
 lifetime = 0.5
 speed_scale = 2.0
@@ -67,6 +74,166 @@ initial_velocity_min = 5.0
 initial_velocity_max = 20.0
 scale_amount_min = 8.0
 scale_amount_max = 15.0
+scale_amount_curve = null
+color = Color(1, 0.3, 0.3, 0.7)
+
+[node name="Trail1" type="CPUParticles2D" parent="Particles"]
+position = Vector2(25, 0)
+z_index = -1
+emitting = false
+amount = 20
+lifetime = 0.5
+speed_scale = 2.0
+local_coords = false
+emission_shape = 1
+emission_sphere_radius = 8.0
+direction = Vector2(0, 0)
+spread = 180.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 5.0
+initial_velocity_max = 20.0
+scale_amount_min = 6.0
+scale_amount_max = 12.0
+scale_amount_curve = null
+color = Color(1, 0.3, 0.3, 0.7)
+
+[node name="Trail2" type="CPUParticles2D" parent="Particles"]
+position = Vector2(17.68, 17.68)
+z_index = -1
+emitting = false
+amount = 20
+lifetime = 0.5
+speed_scale = 2.0
+local_coords = false
+emission_shape = 1
+emission_sphere_radius = 8.0
+direction = Vector2(0, 0)
+spread = 180.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 5.0
+initial_velocity_max = 20.0
+scale_amount_min = 6.0
+scale_amount_max = 12.0
+scale_amount_curve = null
+color = Color(1, 0.3, 0.3, 0.7)
+
+[node name="Trail3" type="CPUParticles2D" parent="Particles"]
+position = Vector2(0, 25)
+z_index = -1
+emitting = false
+amount = 20
+lifetime = 0.5
+speed_scale = 2.0
+local_coords = false
+emission_shape = 1
+emission_sphere_radius = 8.0
+direction = Vector2(0, 0)
+spread = 180.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 5.0
+initial_velocity_max = 20.0
+scale_amount_min = 6.0
+scale_amount_max = 12.0
+scale_amount_curve = null
+color = Color(1, 0.3, 0.3, 0.7)
+
+[node name="Trail4" type="CPUParticles2D" parent="Particles"]
+position = Vector2(-17.68, 17.68)
+z_index = -1
+emitting = false
+amount = 20
+lifetime = 0.5
+speed_scale = 2.0
+local_coords = false
+emission_shape = 1
+emission_sphere_radius = 8.0
+direction = Vector2(0, 0)
+spread = 180.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 5.0
+initial_velocity_max = 20.0
+scale_amount_min = 6.0
+scale_amount_max = 12.0
+scale_amount_curve = null
+color = Color(1, 0.3, 0.3, 0.7)
+
+[node name="Trail5" type="CPUParticles2D" parent="Particles"]
+position = Vector2(-25, 0)
+z_index = -1
+emitting = false
+amount = 20
+lifetime = 0.5
+speed_scale = 2.0
+local_coords = false
+emission_shape = 1
+emission_sphere_radius = 8.0
+direction = Vector2(0, 0)
+spread = 180.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 5.0
+initial_velocity_max = 20.0
+scale_amount_min = 6.0
+scale_amount_max = 12.0
+scale_amount_curve = null
+color = Color(1, 0.3, 0.3, 0.7)
+
+[node name="Trail6" type="CPUParticles2D" parent="Particles"]
+position = Vector2(-17.68, -17.68)
+z_index = -1
+emitting = false
+amount = 20
+lifetime = 0.5
+speed_scale = 2.0
+local_coords = false
+emission_shape = 1
+emission_sphere_radius = 8.0
+direction = Vector2(0, 0)
+spread = 180.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 5.0
+initial_velocity_max = 20.0
+scale_amount_min = 6.0
+scale_amount_max = 12.0
+scale_amount_curve = null
+color = Color(1, 0.3, 0.3, 0.7)
+
+[node name="Trail7" type="CPUParticles2D" parent="Particles"]
+position = Vector2(0, -25)
+z_index = -1
+emitting = false
+amount = 20
+lifetime = 0.5
+speed_scale = 2.0
+local_coords = false
+emission_shape = 1
+emission_sphere_radius = 8.0
+direction = Vector2(0, 0)
+spread = 180.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 5.0
+initial_velocity_max = 20.0
+scale_amount_min = 6.0
+scale_amount_max = 12.0
+scale_amount_curve = null
+color = Color(1, 0.3, 0.3, 0.7)
+
+[node name="Trail8" type="CPUParticles2D" parent="Particles"]
+position = Vector2(17.68, -17.68)
+z_index = -1
+emitting = false
+amount = 20
+lifetime = 0.5
+speed_scale = 2.0
+local_coords = false
+emission_shape = 1
+emission_sphere_radius = 8.0
+direction = Vector2(0, 0)
+spread = 180.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 5.0
+initial_velocity_max = 20.0
+scale_amount_min = 6.0
+scale_amount_max = 12.0
 scale_amount_curve = null
 color = Color(1, 0.3, 0.3, 0.7)
 

@@ -1,7 +1,4 @@
+res://shaders/bubble_effect.gdshader
 res://scripts/player/space_rock.gd
 res://scenes/space_rock/space_rock.tscn
-res://scripts/sandbag.gd
-res://scripts/breakable_block.gd
-res://scripts/ai_controller.gd
-res://scripts/health_bar.gd
-res://scripts/main.gd
+res://scenes/ai_rock.tscn

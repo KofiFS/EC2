@@ -1,0 +1,139 @@
+[gd_scene load_steps=3 format=3 uid="uid://customize_menu_ec2"]
+
+[ext_resource type="Script" path="res://scripts/ui/customize_menu.gd" id="1_customize"]
+[ext_resource type="Shader" path="res://shaders/bubble_effect.gdshader" id="2_bubble"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_bubble"]
+shader = ExtResource("2_bubble")
+shader_parameter/bubble_intensity = 0.85
+shader_parameter/highlight_size = 0.25
+shader_parameter/highlight_intensity = 0.9
+shader_parameter/highlight_position = Vector2(-0.3, -0.3)
+shader_parameter/animation_speed = 1.0
+
+[node name="CustomizeMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_customize")
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -250.0
+offset_top = -250.0
+offset_right = 250.0
+offset_bottom = 250.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = -20.0
+
+[node name="Title" type="Label" parent="Panel/VBoxContainer"]
+layout_mode = 2
+text = "CUSTOMIZE YOUR SHIP"
+horizontal_alignment = 1
+
+[node name="Spacer1" type="Control" parent="Panel/VBoxContainer"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+
+[node name="ParticleContainer" type="HBoxContainer" parent="Panel/VBoxContainer"]
+layout_mode = 2
+
+[node name="ParticleLabel" type="Label" parent="Panel/VBoxContainer/ParticleContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Particle Effect:"
+
+[node name="ParticleOption" type="OptionButton" parent="Panel/VBoxContainer/ParticleContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="DeathContainer" type="HBoxContainer" parent="Panel/VBoxContainer"]
+layout_mode = 2
+
+[node name="DeathLabel" type="Label" parent="Panel/VBoxContainer/DeathContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Death Effect:"
+
+[node name="DeathOption" type="OptionButton" parent="Panel/VBoxContainer/DeathContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ShapeContainer" type="HBoxContainer" parent="Panel/VBoxContainer"]
+layout_mode = 2
+
+[node name="ShapeLabel" type="Label" parent="Panel/VBoxContainer/ShapeContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Body Shape:"
+
+[node name="ShapeOption" type="OptionButton" parent="Panel/VBoxContainer/ShapeContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ColorContainer" type="HBoxContainer" parent="Panel/VBoxContainer"]
+layout_mode = 2
+
+[node name="ColorLabel" type="Label" parent="Panel/VBoxContainer/ColorContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Color:"
+
+[node name="ColorPicker" type="ColorPickerButton" parent="Panel/VBoxContainer/ColorContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Spacer2" type="Control" parent="Panel/VBoxContainer"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+
+[node name="PreviewContainer" type="VBoxContainer" parent="Panel/VBoxContainer"]
+layout_mode = 2
+
+[node name="PreviewLabel" type="Label" parent="Panel/VBoxContainer/PreviewContainer"]
+layout_mode = 2
+text = "Preview:"
+horizontal_alignment = 1
+
+[node name="PreviewPanel" type="Panel" parent="Panel/VBoxContainer/PreviewContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 120)
+
+[node name="PreviewSprite" type="Node2D" parent="Panel/VBoxContainer/PreviewContainer/PreviewPanel"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -30.0
+offset_top = -30.0
+offset_right = 30.0
+offset_bottom = 30.0
+
+[node name="PreviewVisual" type="Polygon2D" parent="Panel/VBoxContainer/PreviewContainer/PreviewPanel/PreviewSprite"]
+material = SubResource("ShaderMaterial_bubble")
+polygon = PackedVector2Array(30, 0, 28.53, 9.27, 24.27, 17.63, 17.63, 24.27, 9.27, 28.53, 0, 30, -9.27, 28.53, -17.63, 24.27, -24.27, 17.63, -28.53, 9.27, -30, 0, -28.53, -9.27, -24.27, -17.63, -17.63, -24.27, -9.27, -28.53, 0, -30, 9.27, -28.53, 17.63, -24.27, 24.27, -17.63, 28.53, -9.27)
+
+[node name="Spacer3" type="Control" parent="Panel/VBoxContainer"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+
+[node name="CloseButton" type="Button" parent="Panel/VBoxContainer"]
+layout_mode = 2
+text = "CLOSE"
+

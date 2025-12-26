@@ -1,13 +1,15 @@
 shader_type canvas_item;
 
-// Space background shader with twinkling stars, nebulae, and parallax scrolling
+// Space background shader with 3D depth, twinkling stars, nebulae, and parallax scrolling
 
 uniform float time_scale : hint_range(0.1, 3.0) = 1.0;
 uniform float star_density : hint_range(0.0, 1.0) = 0.5;
 uniform float nebula_intensity : hint_range(0.0, 1.0) = 0.6;
-uniform bool enable_scroll = true;
-uniform bool enable_twinkle = true;
-uniform bool enable_nebula_drift = true;
+uniform float depth_intensity : hint_range(0.0, 2.0) = 1.0;
+uniform float enable_scroll : hint_range(0.0, 1.0) = 1.0;
+uniform float enable_twinkle : hint_range(0.0, 1.0) = 1.0;
+uniform float enable_nebula_drift : hint_range(0.0, 1.0) = 1.0;
+uniform float enable_parallax : hint_range(0.0, 1.0) = 1.0;
 
 // Color theme - Purple/Blue
 uniform vec3 nebula_color1 : source_color = vec3(0.102, 0.039, 0.243);
@@ -38,14 +40,19 @@ float noise(vec2 p) {
     return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
 }
 
-// Fractal brownian motion for nebulae
-float fbm(vec2 p, float t) {
+// Fractal brownian motion for nebulae with depth
+float fbm(vec2 p, float t, float depth_factor, vec2 base_uv) {
     float value = 0.0;
     float amplitude = 0.5;
     float frequency = 1.0;
     
+    // 3D Parallax for nebulae - use UV-based parallax
+    vec2 uv_center = vec2(0.5, 0.5);
+    vec2 uv_offset = (base_uv - uv_center) * depth_factor * 0.15 * enable_parallax;
+    p += uv_offset;
+    
     for (int i = 0; i < 5; i++) {
-        vec2 drift = enable_nebula_drift ? vec2(t * 0.02, t * 0.01) * float(i + 1) * 0.3 : vec2(0.0);
+        vec2 drift = vec2(t * 0.02, t * 0.01) * float(i + 1) * 0.3 * (1.0 + depth_factor * 0.4) * enable_nebula_drift;
         value += amplitude * noise(p * frequency + drift);
         amplitude *= 0.5;
         frequency *= 2.0;
@@ -54,14 +61,17 @@ float fbm(vec2 p, float t) {
     return value;
 }
 
-// Star layer
-float stars(vec2 uv, float scale, float t, float layer_speed) {
+// Star layer with depth-based size and parallax
+float stars(vec2 uv, float scale, float t, float layer_speed, float depth_factor, vec2 base_uv) {
     vec2 scaled_uv = uv * scale;
     
-    // Parallax scroll
-    if (enable_scroll) {
-        scaled_uv.y += t * layer_speed;
-    }
+    // 3D Parallax effect - use UV-based parallax
+    vec2 uv_center = vec2(0.5, 0.5);
+    vec2 uv_offset = (base_uv - uv_center) * depth_factor * 0.25 * enable_parallax;
+    scaled_uv += uv_offset;
+    
+    // Parallax scroll - depth affects speed
+    scaled_uv.y += t * layer_speed * (1.0 + depth_factor * 0.5) * enable_scroll;
     
     vec2 grid = floor(scaled_uv);
     vec2 grid_uv = fract(scaled_uv);
@@ -76,26 +86,32 @@ float stars(vec2 uv, float scale, float t, float layer_speed) {
         
         // Twinkle effect
         float twinkle = 1.0;
-        if (enable_twinkle) {
-            float twinkle_speed = hash(grid * 2.0) * 3.0 + 1.0;
-            float twinkle_offset = hash(grid * 3.0) * 6.28;
-            twinkle = 0.5 + 0.5 * sin(t * twinkle_speed + twinkle_offset);
-        }
+        float twinkle_speed = hash(grid * 2.0) * 3.0 + 1.0;
+        float twinkle_offset = hash(grid * 3.0) * 6.28;
+        twinkle = mix(1.0, 0.5 + 0.5 * sin(t * twinkle_speed + twinkle_offset), enable_twinkle);
         
-        float size = 0.02 + hash(grid * 4.0) * 0.03;
+        // Depth-based size - closer stars are larger
+        float base_size = 0.015 + hash(grid * 4.0) * 0.02;
+        float size = base_size * (1.0 + depth_factor * 0.8);
         star = smoothstep(size, 0.0, dist) * twinkle;
+        
+        // Add depth-based brightness - closer stars are brighter
+        star *= (1.0 + depth_factor * 0.5);
     }
     
     return star;
 }
 
-// Bright star with glow
-float bright_star(vec2 uv, float scale, float t) {
+// Bright star with glow and depth
+float bright_star(vec2 uv, float scale, float t, float depth_factor, vec2 base_uv) {
     vec2 scaled_uv = uv * scale;
     
-    if (enable_scroll) {
-        scaled_uv.y += t * 0.05;
-    }
+    // 3D Parallax for bright stars - use UV-based parallax
+    vec2 uv_center = vec2(0.5, 0.5);
+    vec2 uv_offset = (base_uv - uv_center) * depth_factor * 0.3 * enable_parallax;
+    scaled_uv += uv_offset;
+    
+    scaled_uv.y += t * 0.05 * (1.0 + depth_factor * 0.3) * enable_scroll;
     
     vec2 grid = floor(scaled_uv);
     vec2 grid_uv = fract(scaled_uv);
@@ -112,16 +128,22 @@ float bright_star(vec2 uv, float scale, float t) {
         float pulse_speed = hash(grid * 5.0) * 0.5 + 0.3;
         float pulse = 0.7 + 0.3 * sin(t * pulse_speed);
         
+        // Depth-based size
+        float core_size = 0.04 * (1.0 + depth_factor * 0.6);
+        float glow_size = 0.15 * (1.0 + depth_factor * 0.8);
+        
         // Core
-        star = smoothstep(0.05, 0.0, dist) * pulse;
+        star = smoothstep(core_size, 0.0, dist) * pulse;
         
-        // Glow
-        star += smoothstep(0.2, 0.0, dist) * 0.3 * pulse;
+        // Glow - larger for closer stars
+        star += smoothstep(glow_size, 0.0, dist) * 0.3 * pulse * (1.0 + depth_factor);
         
-        // Cross flare
-        float flare_x = smoothstep(0.15, 0.0, abs(grid_uv.y - star_pos.y)) * smoothstep(0.3, 0.0, abs(grid_uv.x - star_pos.x));
-        float flare_y = smoothstep(0.15, 0.0, abs(grid_uv.x - star_pos.x)) * smoothstep(0.3, 0.0, abs(grid_uv.y - star_pos.y));
-        star += (flare_x + flare_y) * 0.3 * pulse;
+        // Cross flare - depth affects size
+        float flare_size = 0.12 * (1.0 + depth_factor * 0.5);
+        float flare_width = 0.25 * (1.0 + depth_factor * 0.3);
+        float flare_x = smoothstep(flare_size, 0.0, abs(grid_uv.y - star_pos.y)) * smoothstep(flare_width, 0.0, abs(grid_uv.x - star_pos.x));
+        float flare_y = smoothstep(flare_size, 0.0, abs(grid_uv.x - star_pos.x)) * smoothstep(flare_width, 0.0, abs(grid_uv.y - star_pos.y));
+        star += (flare_x + flare_y) * 0.3 * pulse * (1.0 + depth_factor * 0.5);
     }
     
     return star;
@@ -134,30 +156,45 @@ void fragment() {
     // Base dark background
     vec3 color = vec3(0.0, 0.0, 0.02);
     
-    // Nebulae layers
-    float nebula1 = fbm(uv * 2.0 + vec2(0.0, 0.0), t) * nebula_intensity;
-    float nebula2 = fbm(uv * 3.0 + vec2(5.0, 3.0), t * 0.7) * nebula_intensity;
-    float nebula3 = fbm(uv * 1.5 + vec2(10.0, 7.0), t * 0.5) * nebula_intensity;
+    // Far nebulae layers (deepest)
+    float nebula1 = fbm(uv * 2.0 + vec2(0.0, 0.0), t, 0.0, uv) * nebula_intensity;
+    float nebula2 = fbm(uv * 3.0 + vec2(5.0, 3.0), t * 0.7, 0.2, uv) * nebula_intensity;
+    float nebula3 = fbm(uv * 1.5 + vec2(10.0, 7.0), t * 0.5, 0.4, uv) * nebula_intensity;
     
-    // Apply nebula colors
-    color += nebula_color1 * nebula1 * 0.8;
-    color += nebula_color2 * nebula2 * 0.6;
-    color += mix(nebula_color1, nebula_color2, 0.5) * nebula3 * 0.4;
+    // Apply nebula colors with depth-based intensity
+    color += nebula_color1 * nebula1 * 0.8 * max(0.0, 1.0 - 0.3 * depth_intensity);
+    color += nebula_color2 * nebula2 * 0.6 * max(0.0, 1.0 - 0.2 * depth_intensity);
+    color += mix(nebula_color1, nebula_color2, 0.5) * nebula3 * 0.4 * max(0.0, 1.0 - 0.1 * depth_intensity);
     
-    // Star layers with different parallax speeds
-    float stars1 = stars(uv, 50.0, t, 0.02);  // Distant layer
-    float stars2 = stars(uv, 30.0, t, 0.05);  // Middle layer
-    float stars3 = stars(uv, 15.0, t, 0.08);  // Close layer
+    // Star layers with different depths and parallax speeds
+    float stars1 = stars(uv, 50.0, t, 0.02, 0.0, uv);
+    float stars2 = stars(uv, 30.0, t, 0.05, 0.3, uv);
+    float stars3 = stars(uv, 15.0, t, 0.08, 0.6, uv);
+    float stars4 = stars(uv, 8.0, t, 0.12, 1.0, uv);
     
-    // Combine star layers
-    float all_stars = stars1 * 0.5 + stars2 * 0.7 + stars3;
+    // Combine star layers with depth-based weighting
+    float all_stars = stars1 * 0.4 + stars2 * 0.6 + stars3 * 0.8 + stars4;
     color += star_color * all_stars;
     
-    // Bright stars with glow
-    float bright = bright_star(uv, 8.0, t);
-    color += accent_color * bright * 1.5;
-    color += vec3(1.0) * bright * 0.5;  // White core
+    // Bright stars with glow at different depths
+    float bright1 = bright_star(uv, 8.0, t, 0.3, uv);
+    float bright2 = bright_star(uv, 5.0, t, 0.8, uv);
+    
+    color += accent_color * (bright1 * 1.2 + bright2 * 1.8);
+    color += vec3(1.0) * (bright1 * 0.4 + bright2 * 0.6);
+    
+    // Add depth-based atmospheric fog effect
+    vec2 uv_center = vec2(0.5, 0.5);
+    float center_dist = length(uv - uv_center);
+    float fog_intensity = clamp(center_dist * 0.15 * depth_intensity, 0.0, 0.2);
+    color = mix(color, vec3(0.05, 0.05, 0.1), fog_intensity);
+    
+    // Add subtle depth-based color shift
+    vec3 depth_tint = mix(nebula_color2, accent_color, clamp(center_dist * 0.3, 0.0, 1.0));
+    color = mix(color, depth_tint, clamp(0.1 * depth_intensity, 0.0, 0.1));
+    
+    // Clamp final color to prevent over-brightening
+    color = clamp(color, vec3(0.0), vec3(1.0));
     
     COLOR = vec4(color, 1.0);
 }
-
