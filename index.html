@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bubble Squash & Stretch Physics Demo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0a0a0a;
+            font-family: system-ui, -apple-system, sans-serif;
+            color: #fff;
+            overflow: hidden;
+        }
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            border: 2px solid #333;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(100, 150, 255, 0.3);
+        }
+        .controls {
+            width: 300px;
+            background: rgba(20, 20, 30, 0.9);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        h2 {
+            margin: 0 0 20px 0;
+            color: #667eea;
+            font-size: 20px;
+        }
+        .info {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-size: 12px;
+            color: #93c5fd;
+        }
+        label {
+            display: block;
+            margin: 15px 0 5px 0;
+            font-size: 13px;
+            color: #aaa;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+        .value-display {
+            float: right;
+            color: #667eea;
+            font-weight: 600;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            width: 100%;
+            margin: 5px 0;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+        .checkbox-container input[type="checkbox"] {
+            width: auto;
+            margin-right: 10px;
+        }
+        .instructions {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            pointer-events: none;
+        }
+        .key {
+            display: inline-block;
+            background: #667eea;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin: 0 2px;
+            font-weight: 600;
+        }
+        
+        .health-bar-container {
+            position: absolute;
+            bottom: 40px;
+            right: 40px;
+            z-index: 10;
+            background: transparent;
+        }
+        
+        .health-bar-circular {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            background: transparent;
+        }
+        
+        .health-bar-circular canvas {
+            display: block;
+            background: transparent !important;
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+        }
+        
+        .health-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            pointer-events: none;
+        }
+        
+        .health-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(102, 126, 234, 0.8);
+        }
+        
+        .health-label {
+            font-size: 12px;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .dash-indicator {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #00ff00;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+        
+        .dash-indicator.cooldown {
+            background: #ff0000;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="canvas-container">
+            <canvas id="gameCanvas"></canvas>
+            <div class="instructions">
+                <div>🎮 <strong>Controls:</strong></div>
+                <div><span class="key">W A S D</span> or <span class="key">Arrow Keys</span> - Move</div>
+                <div><span class="key">Space</span> - Dash</div>
+                <div><span class="key">Click</span> - Move to mouse</div>
+            </div>
+            <div class="health-bar-container">
+                <div id="healthBar"></div>
+                <div id="dashIndicator" class="dash-indicator"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Default values
+        const DEFAULT_STRETCH_INTENSITY = 2;
+        const DEFAULT_SQUASH_INTENSITY = 0.7;
+        const DEFAULT_DEFORM_SPEED = 0.25;
+        const DEFAULT_MOVE_SPEED = 5;
+        const DEFAULT_DASH_MULT = 2.5;
+        const DEFAULT_BUBBLE_SIZE = 50;
+        const DEFAULT_SHOW_VELOCITY = false;
+        const DEFAULT_SHOW_TRAIL = true;
+        const DEFAULT_WOBBLE_ON_IDLE = true;
+        
+        // Set canvas size to match container
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // Player bubble - initialize after canvas is resized
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            vx: 0,
+            vy: 0,
+            baseRadius: DEFAULT_BUBBLE_SIZE,
+            scaleX: 1,
+            scaleY: 1,
+            targetScaleX: 1,
+            targetScaleY: 1,
+            rotation: 0,
+            isDashing: false,
+            dashCooldown: 0,
+            trail: []
+        };
+        
+        // Input handling
+        const keys = {};
+        let mouseX = 0;
+        let mouseY = 0;
+        let mouseDown = false;
+        
+        window.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+            if (e.key === ' ' && player.dashCooldown <= 0) {
+                player.isDashing = true;
+                player.dashCooldown = 30; // frames
+            }
+        });
+        
+        window.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+        });
+        
+        canvas.addEventListener('mousedown', () => {
+            mouseDown = true;
+        });
+        
+        canvas.addEventListener('mouseup', () => {
+            mouseDown = false;
+        });
+        
+        function updatePlayer() {
+            const moveSpeed = DEFAULT_MOVE_SPEED;
+            const dashMult = DEFAULT_DASH_MULT;
+            const speed = player.isDashing ? moveSpeed * dashMult : moveSpeed;
+            
+            // Input handling
+            let inputX = 0;
+            let inputY = 0;
+            
+            if (keys['w'] || keys['arrowup']) inputY -= 1;
+            if (keys['s'] || keys['arrowdown']) inputY += 1;
+            if (keys['a'] || keys['arrowleft']) inputX -= 1;
+            if (keys['d'] || keys['arrowright']) inputX += 1;
+            
+            // Mouse movement
+            if (mouseDown) {
+                const dx = mouseX - player.x;
+                const dy = mouseY - player.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > 10) {
+                    inputX = dx / dist;
+                    inputY = dy / dist;
+                }
+            }
+            
+            // Normalize diagonal movement
+            if (inputX !== 0 && inputY !== 0) {
+                const mag = Math.sqrt(inputX * inputX + inputY * inputY);
+                inputX /= mag;
+                inputY /= mag;
+            }
+            
+            // Apply movement
+            player.vx += inputX * speed * 0.3;
+            player.vy += inputY * speed * 0.3;
+            
+            // Friction
+            player.vx *= 0.9;
+            player.vy *= 0.9;
+            
+            // Update position
+            player.x += player.vx;
+            player.y += player.vy;
+            
+            // Boundary collision with bounce
+            const radius = player.baseRadius;
+            const bounceDamping = 0.8; // Energy retained after bounce (0.8 = 80%)
+            
+            // Left wall
+            if (player.x - radius < 0) {
+                player.x = radius;
+                player.vx = Math.abs(player.vx) * bounceDamping; // Bounce right
+            }
+            // Right wall
+            if (player.x + radius > canvas.width) {
+                player.x = canvas.width - radius;
+                player.vx = -Math.abs(player.vx) * bounceDamping; // Bounce left
+            }
+            // Top wall
+            if (player.y - radius < 0) {
+                player.y = radius;
+                player.vy = Math.abs(player.vy) * bounceDamping; // Bounce down
+            }
+            // Bottom wall
+            if (player.y + radius > canvas.height) {
+                player.y = canvas.height - radius;
+                player.vy = -Math.abs(player.vy) * bounceDamping; // Bounce up
+            }
+            
+            // Calculate squash and stretch
+            const velocity = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
+            const maxVelocity = speed * 2;
+            const velocityRatio = Math.min(velocity / maxVelocity, 1);
+            
+            const stretchIntensity = DEFAULT_STRETCH_INTENSITY;
+            const squashIntensity = DEFAULT_SQUASH_INTENSITY;
+            
+            if (velocity > 0.5) {
+                // Stretch in direction of movement
+                const angle = Math.atan2(player.vy, player.vx);
+                player.rotation = angle;
+                
+                // More velocity = more stretch
+                player.targetScaleX = 1 + (stretchIntensity - 1) * velocityRatio;
+                player.targetScaleY = 1 - (1 - squashIntensity) * velocityRatio;
+            } else {
+                // Return to normal when idle
+                player.targetScaleX = 1;
+                player.targetScaleY = 1;
+                
+                // Idle wobble
+                if (DEFAULT_WOBBLE_ON_IDLE) {
+                    const wobble = Math.sin(Date.now() * 0.003) * 0.05;
+                    player.targetScaleX = 1 + wobble;
+                    player.targetScaleY = 1 - wobble;
+                }
+            }
+            
+            // Smooth interpolation
+            const deformSpeed = DEFAULT_DEFORM_SPEED;
+            player.scaleX += (player.targetScaleX - player.scaleX) * deformSpeed;
+            player.scaleY += (player.targetScaleY - player.scaleY) * deformSpeed;
+            
+            // Update dash and trail
+            if (player.dashCooldown > 0) player.dashCooldown--;
+            if (player.isDashing && player.dashCooldown <= 0) {
+                player.isDashing = false;
+            }
+            
+            // Trail
+            if (DEFAULT_SHOW_TRAIL) {
+                player.trail.push({ 
+                    x: player.x, 
+                    y: player.y, 
+                    scaleX: player.scaleX,
+                    scaleY: player.scaleY,
+                    rotation: player.rotation,
+                    alpha: 1 
+                });
+                
+                if (player.trail.length > 15) {
+                    player.trail.shift();
+                }
+                
+                player.trail.forEach(t => {
+                    t.alpha *= 0.9;
+                });
+            } else {
+                player.trail = [];
+            }
+        }
+        
+        function drawBubble(x, y, scaleX, scaleY, rotation, alpha = 1) {
+            const radius = DEFAULT_BUBBLE_SIZE;
+            
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(rotation);
+            ctx.scale(scaleX, scaleY);
+            
+            // Outer bubble
+            const gradient = ctx.createRadialGradient(-radius * 0.3, -radius * 0.3, radius * 0.1, 0, 0, radius);
+            gradient.addColorStop(0, `rgba(150, 200, 255, ${0.8 * alpha})`);
+            gradient.addColorStop(0.5, `rgba(100, 150, 255, ${0.6 * alpha})`);
+            gradient.addColorStop(1, `rgba(59, 130, 246, ${0.9 * alpha})`);
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Highlight removed
+            
+            // Rim
+            ctx.strokeStyle = `rgba(200, 230, 255, ${0.6 * alpha})`;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(0, 0, radius - 2, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            ctx.restore();
+        }
+        
+        function draw() {
+            // Clear canvas
+            ctx.fillStyle = '#0a0a1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid
+            ctx.strokeStyle = 'rgba(100, 100, 150, 0.1)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < canvas.width; x += 50) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += 50) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            // Draw trail
+            if (DEFAULT_SHOW_TRAIL) {
+                player.trail.forEach(t => {
+                    drawBubble(t.x, t.y, t.scaleX, t.scaleY, t.rotation, t.alpha * 0.5);
+                });
+            }
+            
+            // Draw main bubble
+            drawBubble(player.x, player.y, player.scaleX, player.scaleY, player.rotation);
+            
+            // Draw velocity vector
+            if (DEFAULT_SHOW_VELOCITY && (player.vx !== 0 || player.vy !== 0)) {
+                const velMag = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
+                const velX = (player.vx / velMag) * 100;
+                const velY = (player.vy / velMag) * 100;
+                
+                ctx.strokeStyle = '#00ff88';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(player.x, player.y);
+                ctx.lineTo(player.x + velX, player.y + velY);
+                ctx.stroke();
+                
+                // Arrowhead
+                const angle = Math.atan2(velY, velX);
+                ctx.fillStyle = '#00ff88';
+                ctx.beginPath();
+                ctx.moveTo(player.x + velX, player.y + velY);
+                ctx.lineTo(
+                    player.x + velX - 10 * Math.cos(angle - Math.PI / 6),
+                    player.y + velY - 10 * Math.sin(angle - Math.PI / 6)
+                );
+                ctx.lineTo(
+                    player.x + velX - 10 * Math.cos(angle + Math.PI / 6),
+                    player.y + velY - 10 * Math.sin(angle + Math.PI / 6)
+                );
+                ctx.closePath();
+                ctx.fill();
+            }
+            
+            // Update dash indicator light
+            const dashIndicator = document.getElementById('dashIndicator');
+            if (dashIndicator) {
+                if (player.dashCooldown > 0) {
+                    dashIndicator.classList.add('cooldown');
+                } else {
+                    dashIndicator.classList.remove('cooldown');
+                }
+            }
+        }
+        
+        function gameLoop() {
+            updatePlayer();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        function resetPosition() {
+            player.x = canvas.width / 2;
+            player.y = canvas.height / 2;
+            player.vx = 0;
+            player.vy = 0;
+            player.scaleX = 1;
+            player.scaleY = 1;
+            player.trail = [];
+        }
+        
+        // Circular Health Bar Class
+        class CircularHealthBar {
+            constructor(containerId, options = {}) {
+                // Configuration
+                this.maxHealth = options.maxHealth || 100;
+                this.currentHealth = options.currentHealth || this.maxHealth;
+                this.radius = options.radius || 60;
+                this.lineWidth = options.lineWidth || 12;
+                this.glowSize = 20; // Size of the glow effect
+                // Add extra padding for glow effect to prevent cutoff
+                this.size = (this.radius + this.lineWidth + this.glowSize) * 2;
+                
+                // Colors
+                this.bgColor = options.bgColor || '#1a1a2e';
+                this.startColor = options.startColor || '#667eea';
+                this.endColor = options.endColor || '#764ba2';
+                this.glowColor = options.glowColor || '#667eea';
+                
+                // Animation
+                this.animationDuration = options.animationDuration || 300; // ms
+                this.animationStartTime = null;
+                this.animationStartHealth = this.currentHealth;
+                this.animationTargetHealth = this.currentHealth;
+                this.isAnimating = false;
+                
+                // Create elements
+                this.container = document.getElementById(containerId);
+                this.container.className = 'health-bar-circular';
+                this.container.style.width = this.size + 'px';
+                this.container.style.height = this.size + 'px';
+                
+                // Create canvas
+                this.canvas = document.createElement('canvas');
+                this.canvas.width = this.size;
+                this.canvas.height = this.size;
+                this.ctx = this.canvas.getContext('2d');
+                this.container.appendChild(this.canvas);
+                
+                // Create text overlay
+                this.textContainer = document.createElement('div');
+                this.textContainer.className = 'health-text';
+                this.textContainer.innerHTML = `
+                    <div class="health-value">${Math.round(this.currentHealth)}</div>
+                    <div class="health-label">HP</div>
+                `;
+                this.container.appendChild(this.textContainer);
+                
+                // Initial draw
+                this.draw();
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                const centerX = this.size / 2;
+                const centerY = this.size / 2;
+                
+                // Clear canvas
+                ctx.clearRect(0, 0, this.size, this.size);
+                
+                // Calculate percentage
+                const percentage = this.currentHealth / this.maxHealth;
+                const endAngle = Math.PI * 2 * percentage;
+                
+                // Background circle removed - no box around health bar
+                
+                if (percentage > 0) {
+                    // Draw health arc with gradient
+                    const gradient = ctx.createLinearGradient(
+                        centerX - this.radius, 
+                        centerY, 
+                        centerX + this.radius, 
+                        centerY
+                    );
+                    gradient.addColorStop(0, this.startColor);
+                    gradient.addColorStop(1, this.endColor);
+                    
+                    // Set glow effect
+                    ctx.shadowBlur = this.glowSize;
+                    ctx.shadowColor = this.glowColor;
+                    ctx.shadowOffsetX = 0;
+                    ctx.shadowOffsetY = 0;
+                    
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, this.radius, -Math.PI / 2, -Math.PI / 2 + endAngle);
+                    ctx.strokeStyle = gradient;
+                    ctx.lineWidth = this.lineWidth;
+                    ctx.lineCap = 'round';
+                    ctx.stroke();
+                    
+                    // Reset shadow
+                    ctx.shadowBlur = 0;
+                    ctx.shadowColor = 'transparent';
+                }
+            }
+            
+            updateText() {
+                const healthValue = this.textContainer.querySelector('.health-value');
+                healthValue.textContent = Math.round(this.currentHealth);
+                
+                // Color based on health percentage
+                const percentage = this.currentHealth / this.maxHealth;
+                if (percentage > 0.5) {
+                    healthValue.style.textShadow = '0 0 10px rgba(102, 126, 234, 0.8)';
+                } else if (percentage > 0.25) {
+                    healthValue.style.textShadow = '0 0 10px rgba(255, 200, 0, 0.8)';
+                } else {
+                    healthValue.style.textShadow = '0 0 10px rgba(255, 100, 100, 0.8)';
+                }
+            }
+            
+            animate(timestamp) {
+                if (!this.animationStartTime) {
+                    this.animationStartTime = timestamp;
+                }
+                
+                const elapsed = timestamp - this.animationStartTime;
+                const progress = Math.min(elapsed / this.animationDuration, 1);
+                
+                // Easing function (ease out)
+                const eased = 1 - Math.pow(1 - progress, 3);
+                
+                // Interpolate health
+                this.currentHealth = this.animationStartHealth + 
+                    (this.animationTargetHealth - this.animationStartHealth) * eased;
+                
+                this.draw();
+                this.updateText();
+                
+                if (progress < 1) {
+                    requestAnimationFrame((t) => this.animate(t));
+                } else {
+                    this.currentHealth = this.animationTargetHealth;
+                    this.isAnimating = false;
+                    this.animationStartTime = null;
+                }
+            }
+            
+            setHealth(value, animate = true) {
+                const newHealth = Math.max(0, Math.min(this.maxHealth, value));
+                
+                if (animate) {
+                    this.animationStartHealth = this.currentHealth;
+                    this.animationTargetHealth = newHealth;
+                    
+                    if (!this.isAnimating) {
+                        this.isAnimating = true;
+                        requestAnimationFrame((t) => this.animate(t));
+                    }
+                } else {
+                    this.currentHealth = newHealth;
+                    this.draw();
+                    this.updateText();
+                }
+            }
+            
+            takeDamage(amount) {
+                this.setHealth(this.currentHealth - amount);
+            }
+            
+            heal(amount) {
+                this.setHealth(this.currentHealth + amount);
+            }
+            
+            // Get current health percentage (useful for game logic)
+            getPercentage() {
+                return this.currentHealth / this.maxHealth;
+            }
+            
+            // Change colors dynamically
+            setColors(startColor, endColor, glowColor) {
+                this.startColor = startColor;
+                this.endColor = endColor;
+                if (glowColor) this.glowColor = glowColor;
+                this.draw();
+            }
+        }
+        
+        // Create health bar instance
+        const healthBar = new CircularHealthBar('healthBar', {
+            maxHealth: 100,
+            currentHealth: 100,
+            radius: 60,
+            lineWidth: 12,
+            startColor: '#667eea',
+            endColor: '#764ba2',
+            glowColor: '#667eea'
+        });
+        
+        // Start game loop
+        gameLoop();
+    </script>
+</body>
+</html>
+
