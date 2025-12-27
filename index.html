@@ -699,6 +699,12 @@
                 if (localPlayerId) {
                     players.set(localPlayerId, localPlayer);
                 }
+                // Save color to localStorage
+                try {
+                    localStorage.setItem('playerColor', color);
+                } catch (e) {
+                    console.warn('Could not save color to localStorage:', e);
+                }
                 // Immediately broadcast color change to other players
                 if (connections.size > 0) {
                     const colorState = {
@@ -714,6 +720,28 @@
                     broadcastToAll(colorState);
                 }
             }
+        }
+        
+        function loadSavedColor() {
+            try {
+                const savedColor = localStorage.getItem('playerColor');
+                if (savedColor) {
+                    const colorPicker = document.getElementById('colorPicker');
+                    if (colorPicker) {
+                        colorPicker.value = savedColor;
+                        if (localPlayer) {
+                            localPlayer.color = hexToHsl(savedColor);
+                            if (localPlayerId) {
+                                players.set(localPlayerId, localPlayer);
+                            }
+                        }
+                    }
+                    return savedColor;
+                }
+            } catch (e) {
+                console.warn('Could not load color from localStorage:', e);
+            }
+            return null;
         }
         
         window.addEventListener('keydown', (e) => {
@@ -1731,10 +1759,29 @@
             glowColor: '#667eea'
         });
         
+        // Setup color picker first (before creating player)
+        const colorPicker = document.getElementById('colorPicker');
+        if (colorPicker) {
+            // Load saved color from localStorage
+            try {
+                const savedColor = localStorage.getItem('playerColor');
+                if (savedColor) {
+                    colorPicker.value = savedColor;
+                }
+            } catch (e) {
+                console.warn('Could not load color from localStorage:', e);
+            }
+            
+            // Update color when picker changes
+            colorPicker.addEventListener('input', (e) => {
+                updatePlayerColor(e.target.value);
+            });
+        }
+        
         // Initialize local player for single player mode
         localPlayerId = 'local';
         localPlayer = createPlayer('local', true);
-        // Set default color from color picker if available
+        // Set color from saved preference or color picker default
         const defaultColorPicker = document.getElementById('colorPicker');
         if (defaultColorPicker && localPlayer) {
             localPlayer.color = hexToHsl(defaultColorPicker.value);
@@ -1751,14 +1798,6 @@
                     oceanBackground = new OceanComplete(canvas);
                 }
             }, 100);
-        }
-        
-        // Setup color picker
-        const colorPicker = document.getElementById('colorPicker');
-        if (colorPicker) {
-            colorPicker.addEventListener('input', (e) => {
-                updatePlayerColor(e.target.value);
-            });
         }
         
         // Start game loop
