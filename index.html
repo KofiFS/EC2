@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bubble Squash & Stretch Physics Demo</title>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <style>
         body {
             margin: 0;
@@ -101,6 +102,12 @@
             border-radius: 8px;
             font-size: 14px;
             pointer-events: none;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        
+        .instructions.hidden {
+            opacity: 0;
+            visibility: hidden;
         }
         .key {
             display: inline-block;
@@ -174,9 +181,115 @@
             background: #ff0000;
             box-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
         }
+        .multiplayer-ui {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            background: rgba(20, 20, 30, 0.95);
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #667eea;
+            display: block;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        
+        .multiplayer-ui.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        
+        .multiplayer-ui h3 {
+            margin: 0 0 15px 0;
+            color: #667eea;
+            font-size: 18px;
+        }
+        
+        .multiplayer-ui button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 5px;
+            transition: transform 0.2s;
+        }
+        
+        .multiplayer-ui button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .multiplayer-ui input {
+            background: rgba(10, 10, 20, 0.8);
+            border: 1px solid #333;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            margin: 5px;
+            width: 200px;
+        }
+        
+        .room-id-display {
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 16px;
+            color: #667eea;
+        }
+        
+        .player-list {
+            margin-top: 15px;
+            font-size: 12px;
+            color: #aaa;
+        }
+        
+        .player-list-item {
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .connection-status {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+            background: #ff0000;
+        }
+        
+        .connection-status.connected {
+            background: #00ff00;
+        }
     </style>
 </head>
 <body>
+    <div class="multiplayer-ui" id="multiplayerUI">
+        <h3>Multiplayer</h3>
+        <div id="menuScreen">
+            <button onclick="hostGame()">Host Game</button>
+            <button onclick="showJoinScreen()">Join Game</button>
+        </div>
+        <div id="joinScreen" style="display: none;">
+            <input type="text" id="roomIdInput" placeholder="Enter Room ID">
+            <button onclick="joinGame()">Connect</button>
+            <button onclick="showMenuScreen()">Back</button>
+        </div>
+        <div id="gameScreen" style="display: none;">
+            <div class="room-id-display" id="roomIdDisplay"></div>
+            <div class="player-list" id="playerList"></div>
+            <button onclick="leaveGame()">Leave Game</button>
+        </div>
+    </div>
+    
     <div class="container">
         <div class="canvas-container">
             <canvas id="gameCanvas"></canvas>
@@ -208,31 +321,279 @@
         const DEFAULT_SHOW_TRAIL = true;
         const DEFAULT_WOBBLE_ON_IDLE = true;
         
+        // Ocean background variable (declared early so resizeCanvas can access it)
+        let oceanBackground = null;
+        
         // Set canvas size to match container
         function resizeCanvas() {
             const container = canvas.parentElement;
+            const oldWidth = canvas.width;
+            const oldHeight = canvas.height;
             canvas.width = container.clientWidth;
             canvas.height = container.clientHeight;
+            
+            // Reinitialize ocean background if size changed
+            if (oceanBackground && (oldWidth !== canvas.width || oldHeight !== canvas.height)) {
+                oceanBackground.resize();
+            }
         }
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
         
+        // Multiplayer state
+        let peer = null;
+        let connections = new Map(); // peerId -> DataConnection
+        let players = new Map(); // peerId -> player data
+        let localPlayerId = null;
+        let isHost = false;
+        let roomId = null;
+        let lastSyncTime = 0;
+        const SYNC_INTERVAL = 1000 / 60; // 60fps for position/velocity
+        const SYNC_INTERVAL_MEDIUM = 1000 / 30; // 30fps for scale/rotation
+        let lastSyncTimeMedium = 0;
+        
         // Player bubble - initialize after canvas is resized
-        const player = {
-            x: canvas.width / 2,
-            y: canvas.height / 2,
-            vx: 0,
-            vy: 0,
-            baseRadius: DEFAULT_BUBBLE_SIZE,
-            scaleX: 1,
-            scaleY: 1,
-            targetScaleX: 1,
-            targetScaleY: 1,
-            rotation: 0,
-            isDashing: false,
-            dashCooldown: 0,
-            trail: []
-        };
+        function createPlayer(id, isLocal = false) {
+            return {
+                id: id,
+                x: canvas.width / 2 + (Math.random() - 0.5) * 100,
+                y: canvas.height / 2 + (Math.random() - 0.5) * 100,
+                vx: 0,
+                vy: 0,
+                baseRadius: DEFAULT_BUBBLE_SIZE,
+                scaleX: 1,
+                scaleY: 1,
+                targetScaleX: 1,
+                targetScaleY: 1,
+                rotation: 0,
+                isDashing: false,
+                dashCooldown: 0,
+                trail: [],
+                color: isLocal ? null : generatePlayerColor(id), // Local player uses default, others get unique colors
+                // Interpolation for smooth remote player movement
+                targetX: 0,
+                targetY: 0,
+                targetVx: 0,
+                targetVy: 0,
+                lastUpdateTime: Date.now()
+            };
+        }
+        
+        function generatePlayerColor(id) {
+            // Generate consistent color based on player ID
+            const hue = (id.charCodeAt(0) * 137.508) % 360;
+            return `hsl(${hue}, 70%, 60%)`;
+        }
+        
+        let localPlayer = null;
+        
+        // Ocean Background
+        class OceanComplete {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = ctx; // Use the global ctx instead of creating a new one
+                
+                // Initialize sub-components
+                this.initWaves();
+                this.initBubbles();
+                this.initCaustics();
+            }
+            
+            // === WAVES ===
+            initWaves() {
+                this.waves = [];
+                this.colors = [
+                    { top: '#001a33', bottom: '#003d5c' },
+                    { top: '#002a44', bottom: '#004d6d' },
+                    { top: '#003355', bottom: '#005577' }
+                ];
+                
+                for (let i = 0; i < 5; i++) {
+                    this.waves.push({
+                        amplitude: 30 + Math.random() * 40,
+                        frequency: 0.003 + Math.random() * 0.002,
+                        speed: 0.0005 + Math.random() * 0.001,
+                        offset: Math.random() * Math.PI * 2,
+                        yPosition: this.canvas.height * (0.3 + i * 0.15),
+                        color: this.colors[i % this.colors.length],
+                        phase: 0
+                    });
+                }
+            }
+            
+            updateWaves(time) {
+                this.waves.forEach(wave => {
+                    wave.phase = time * wave.speed;
+                });
+            }
+            
+            drawWaves() {
+                // Draw waves from back to front
+                this.waves.forEach((wave, index) => {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, this.canvas.height);
+                    
+                    for (let x = 0; x <= this.canvas.width; x += 5) {
+                        const y = wave.yPosition + 
+                            Math.sin(x * wave.frequency + wave.phase + wave.offset) * wave.amplitude;
+                        this.ctx.lineTo(x, y);
+                    }
+                    
+                    this.ctx.lineTo(this.canvas.width, this.canvas.height);
+                    this.ctx.closePath();
+                    
+                    const waveGradient = this.ctx.createLinearGradient(0, wave.yPosition - 50, 0, this.canvas.height);
+                    waveGradient.addColorStop(0, wave.color.top);
+                    waveGradient.addColorStop(1, wave.color.bottom);
+                    
+                    this.ctx.fillStyle = waveGradient;
+                    this.ctx.fill();
+                    
+                    // Wave highlights
+                    this.ctx.strokeStyle = `rgba(0, 200, 255, ${0.2 - index * 0.03})`;
+                    this.ctx.lineWidth = 2;
+                    this.ctx.stroke();
+                });
+            }
+            
+            // === BUBBLES ===
+            initBubbles() {
+                this.bubbles = [];
+                for (let i = 0; i < 50; i++) {
+                    this.bubbles.push(this.createBubble());
+                }
+            }
+            
+            createBubble() {
+                return {
+                    x: Math.random() * this.canvas.width,
+                    y: this.canvas.height + Math.random() * 200,
+                    radius: 3 + Math.random() * 15,
+                    speed: 0.5 + Math.random() * 1.5,
+                    wobble: Math.random() * 0.02,
+                    wobbleOffset: Math.random() * Math.PI * 2,
+                    opacity: 0.3 + Math.random() * 0.4
+                };
+            }
+            
+            updateBubbles() {
+                this.bubbles.forEach(bubble => {
+                    bubble.y -= bubble.speed;
+                    bubble.x += Math.sin(bubble.y * bubble.wobble + bubble.wobbleOffset) * 0.5;
+                    
+                    if (bubble.y < -bubble.radius * 2) {
+                        Object.assign(bubble, this.createBubble());
+                        bubble.y = this.canvas.height + Math.random() * 200;
+                    }
+                });
+            }
+            
+            drawBubbles() {
+                this.bubbles.forEach(bubble => {
+                    // Bubble gradient
+                    const bubbleGradient = this.ctx.createRadialGradient(
+                        bubble.x - bubble.radius * 0.3,
+                        bubble.y - bubble.radius * 0.3,
+                        0,
+                        bubble.x,
+                        bubble.y,
+                        bubble.radius
+                    );
+                    bubbleGradient.addColorStop(0, `rgba(200, 240, 255, ${bubble.opacity})`);
+                    bubbleGradient.addColorStop(0.7, `rgba(100, 200, 255, ${bubble.opacity * 0.5})`);
+                    bubbleGradient.addColorStop(1, `rgba(0, 150, 255, 0)`);
+                    
+                    this.ctx.fillStyle = bubbleGradient;
+                    this.ctx.beginPath();
+                    this.ctx.arc(bubble.x, bubble.y, bubble.radius, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    // Highlight
+                    this.ctx.fillStyle = `rgba(255, 255, 255, ${bubble.opacity * 0.6})`;
+                    this.ctx.beginPath();
+                    this.ctx.arc(bubble.x - bubble.radius * 0.3, bubble.y - bubble.radius * 0.3, bubble.radius * 0.3, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    // Rim
+                    this.ctx.strokeStyle = `rgba(200, 240, 255, ${bubble.opacity * 0.4})`;
+                    this.ctx.lineWidth = 1.5;
+                    this.ctx.beginPath();
+                    this.ctx.arc(bubble.x, bubble.y, bubble.radius, 0, Math.PI * 2);
+                    this.ctx.stroke();
+                });
+            }
+            
+            // === CAUSTIC LIGHT ===
+            initCaustics() {
+                this.caustics = [];
+                for (let i = 0; i < 10; i++) {
+                    this.caustics.push({
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        radius: 100 + Math.random() * 200,
+                        speed: 0.0002 + Math.random() * 0.0003,
+                        phase: Math.random() * Math.PI * 2
+                    });
+                }
+            }
+            
+            updateCaustics(time) {
+                this.caustics.forEach(c => {
+                    c.phase = time * c.speed;
+                });
+            }
+            
+            drawCaustics() {
+                this.ctx.globalCompositeOperation = 'lighter';
+                
+                this.caustics.forEach(c => {
+                    const x = c.x + Math.sin(c.phase) * 50;
+                    const y = c.y + Math.cos(c.phase * 0.7) * 30;
+                    
+                    const causticGradient = this.ctx.createRadialGradient(x, y, 0, x, y, c.radius);
+                    causticGradient.addColorStop(0, 'rgba(100, 220, 255, 0.3)');
+                    causticGradient.addColorStop(0.5, 'rgba(0, 200, 255, 0.1)');
+                    causticGradient.addColorStop(1, 'rgba(0, 150, 255, 0)');
+                    
+                    this.ctx.fillStyle = causticGradient;
+                    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                });
+                
+                this.ctx.globalCompositeOperation = 'source-over';
+            }
+            
+            // === MAIN UPDATE & DRAW ===
+            update(time) {
+                this.updateWaves(time);
+                this.updateBubbles();
+                this.updateCaustics(time);
+            }
+            
+            draw(time) {
+                // 1. Draw base water gradient
+                const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+                gradient.addColorStop(0, '#003d5c');
+                gradient.addColorStop(1, '#001a33');
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // 2. Draw caustic light patterns
+                this.drawCaustics();
+                
+                // 3. Draw waves
+                this.drawWaves();
+                
+                // 4. Draw bubbles on top
+                this.drawBubbles();
+            }
+            
+            // Reinitialize when canvas resizes
+            resize() {
+                this.initWaves();
+                this.initBubbles();
+                this.initCaustics();
+            }
+        }
         
         // Input handling
         const keys = {};
@@ -240,11 +601,43 @@
         let mouseY = 0;
         let mouseDown = false;
         
+        // UI visibility state
+        let uiVisible = true;
+        
+        function toggleUI() {
+            uiVisible = !uiVisible;
+            const instructions = document.querySelector('.instructions');
+            const multiplayerUI = document.getElementById('multiplayerUI');
+            
+            if (instructions) {
+                if (uiVisible) {
+                    instructions.classList.remove('hidden');
+                } else {
+                    instructions.classList.add('hidden');
+                }
+            }
+            
+            if (multiplayerUI) {
+                if (uiVisible) {
+                    multiplayerUI.classList.remove('hidden');
+                } else {
+                    multiplayerUI.classList.add('hidden');
+                }
+            }
+        }
+        
         window.addEventListener('keydown', (e) => {
+            // Toggle UI with ESC or P
+            if (e.key === 'Escape' || e.key.toLowerCase() === 'p') {
+                e.preventDefault();
+                toggleUI();
+                return;
+            }
+            
             keys[e.key.toLowerCase()] = true;
-            if (e.key === ' ' && player.dashCooldown <= 0) {
-                player.isDashing = true;
-                player.dashCooldown = 30; // frames
+            if (e.key === ' ' && localPlayer && localPlayer.dashCooldown <= 0) {
+                localPlayer.isDashing = true;
+                localPlayer.dashCooldown = 30; // frames
             }
         });
         
@@ -266,10 +659,51 @@
             mouseDown = false;
         });
         
+        // Collision detection and resolution between players
+        function resolvePlayerCollisions(player1, player2) {
+            const dx = player2.x - player1.x;
+            const dy = player2.y - player1.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const minDistance = player1.baseRadius + player2.baseRadius;
+            
+            if (distance < minDistance && distance > 0) {
+                // Calculate overlap
+                const overlap = minDistance - distance;
+                const separationX = (dx / distance) * overlap * 0.5;
+                const separationY = (dy / distance) * overlap * 0.5;
+                
+                // Push players apart
+                player1.x -= separationX;
+                player1.y -= separationY;
+                player2.x += separationX;
+                player2.y += separationY;
+                
+                // Apply collision response (bounce effect)
+                const normalX = dx / distance;
+                const normalY = dy / distance;
+                const relativeVx = player2.vx - player1.vx;
+                const relativeVy = player2.vy - player1.vy;
+                const relativeSpeed = relativeVx * normalX + relativeVy * normalY;
+                
+                // Only apply bounce if players are moving towards each other
+                if (relativeSpeed < 0) {
+                    const bounceStrength = 0.3; // How much velocity is transferred
+                    const impulse = relativeSpeed * bounceStrength;
+                    
+                    player1.vx += impulse * normalX;
+                    player1.vy += impulse * normalY;
+                    player2.vx -= impulse * normalX;
+                    player2.vy -= impulse * normalY;
+                }
+            }
+        }
+        
         function updatePlayer() {
+            if (!localPlayer) return;
+            
             const moveSpeed = DEFAULT_MOVE_SPEED;
             const dashMult = DEFAULT_DASH_MULT;
-            const speed = player.isDashing ? moveSpeed * dashMult : moveSpeed;
+            const speed = localPlayer.isDashing ? moveSpeed * dashMult : moveSpeed;
             
             // Input handling
             let inputX = 0;
@@ -282,8 +716,8 @@
             
             // Mouse movement
             if (mouseDown) {
-                const dx = mouseX - player.x;
-                const dy = mouseY - player.y;
+                const dx = mouseX - localPlayer.x;
+                const dy = mouseY - localPlayer.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist > 10) {
                     inputX = dx / dist;
@@ -299,44 +733,51 @@
             }
             
             // Apply movement
-            player.vx += inputX * speed * 0.3;
-            player.vy += inputY * speed * 0.3;
+            localPlayer.vx += inputX * speed * 0.3;
+            localPlayer.vy += inputY * speed * 0.3;
             
             // Friction
-            player.vx *= 0.9;
-            player.vy *= 0.9;
+            localPlayer.vx *= 0.9;
+            localPlayer.vy *= 0.9;
             
             // Update position
-            player.x += player.vx;
-            player.y += player.vy;
+            localPlayer.x += localPlayer.vx;
+            localPlayer.y += localPlayer.vy;
             
             // Boundary collision with bounce
-            const radius = player.baseRadius;
+            const radius = localPlayer.baseRadius;
             const bounceDamping = 0.8; // Energy retained after bounce (0.8 = 80%)
             
             // Left wall
-            if (player.x - radius < 0) {
-                player.x = radius;
-                player.vx = Math.abs(player.vx) * bounceDamping; // Bounce right
+            if (localPlayer.x - radius < 0) {
+                localPlayer.x = radius;
+                localPlayer.vx = Math.abs(localPlayer.vx) * bounceDamping; // Bounce right
             }
             // Right wall
-            if (player.x + radius > canvas.width) {
-                player.x = canvas.width - radius;
-                player.vx = -Math.abs(player.vx) * bounceDamping; // Bounce left
+            if (localPlayer.x + radius > canvas.width) {
+                localPlayer.x = canvas.width - radius;
+                localPlayer.vx = -Math.abs(localPlayer.vx) * bounceDamping; // Bounce left
             }
             // Top wall
-            if (player.y - radius < 0) {
-                player.y = radius;
-                player.vy = Math.abs(player.vy) * bounceDamping; // Bounce down
+            if (localPlayer.y - radius < 0) {
+                localPlayer.y = radius;
+                localPlayer.vy = Math.abs(localPlayer.vy) * bounceDamping; // Bounce down
             }
             // Bottom wall
-            if (player.y + radius > canvas.height) {
-                player.y = canvas.height - radius;
-                player.vy = -Math.abs(player.vy) * bounceDamping; // Bounce up
+            if (localPlayer.y + radius > canvas.height) {
+                localPlayer.y = canvas.height - radius;
+                localPlayer.vy = -Math.abs(localPlayer.vy) * bounceDamping; // Bounce up
             }
             
+            // Check collisions with other players
+            players.forEach((otherPlayer, otherId) => {
+                if (otherId !== localPlayerId && otherPlayer) {
+                    resolvePlayerCollisions(localPlayer, otherPlayer);
+                }
+            });
+            
             // Calculate squash and stretch
-            const velocity = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
+            const velocity = Math.sqrt(localPlayer.vx * localPlayer.vx + localPlayer.vy * localPlayer.vy);
             const maxVelocity = speed * 2;
             const velocityRatio = Math.min(velocity / maxVelocity, 1);
             
@@ -345,60 +786,60 @@
             
             if (velocity > 0.5) {
                 // Stretch in direction of movement
-                const angle = Math.atan2(player.vy, player.vx);
-                player.rotation = angle;
+                const angle = Math.atan2(localPlayer.vy, localPlayer.vx);
+                localPlayer.rotation = angle;
                 
                 // More velocity = more stretch
-                player.targetScaleX = 1 + (stretchIntensity - 1) * velocityRatio;
-                player.targetScaleY = 1 - (1 - squashIntensity) * velocityRatio;
+                localPlayer.targetScaleX = 1 + (stretchIntensity - 1) * velocityRatio;
+                localPlayer.targetScaleY = 1 - (1 - squashIntensity) * velocityRatio;
             } else {
                 // Return to normal when idle
-                player.targetScaleX = 1;
-                player.targetScaleY = 1;
+                localPlayer.targetScaleX = 1;
+                localPlayer.targetScaleY = 1;
                 
                 // Idle wobble
                 if (DEFAULT_WOBBLE_ON_IDLE) {
                     const wobble = Math.sin(Date.now() * 0.003) * 0.05;
-                    player.targetScaleX = 1 + wobble;
-                    player.targetScaleY = 1 - wobble;
+                    localPlayer.targetScaleX = 1 + wobble;
+                    localPlayer.targetScaleY = 1 - wobble;
                 }
             }
             
             // Smooth interpolation
             const deformSpeed = DEFAULT_DEFORM_SPEED;
-            player.scaleX += (player.targetScaleX - player.scaleX) * deformSpeed;
-            player.scaleY += (player.targetScaleY - player.scaleY) * deformSpeed;
+            localPlayer.scaleX += (localPlayer.targetScaleX - localPlayer.scaleX) * deformSpeed;
+            localPlayer.scaleY += (localPlayer.targetScaleY - localPlayer.scaleY) * deformSpeed;
             
             // Update dash and trail
-            if (player.dashCooldown > 0) player.dashCooldown--;
-            if (player.isDashing && player.dashCooldown <= 0) {
-                player.isDashing = false;
+            if (localPlayer.dashCooldown > 0) localPlayer.dashCooldown--;
+            if (localPlayer.isDashing && localPlayer.dashCooldown <= 0) {
+                localPlayer.isDashing = false;
             }
             
             // Trail
             if (DEFAULT_SHOW_TRAIL) {
-                player.trail.push({ 
-                    x: player.x, 
-                    y: player.y, 
-                    scaleX: player.scaleX,
-                    scaleY: player.scaleY,
-                    rotation: player.rotation,
+                localPlayer.trail.push({ 
+                    x: localPlayer.x, 
+                    y: localPlayer.y, 
+                    scaleX: localPlayer.scaleX,
+                    scaleY: localPlayer.scaleY,
+                    rotation: localPlayer.rotation,
                     alpha: 1 
                 });
                 
-                if (player.trail.length > 15) {
-                    player.trail.shift();
+                if (localPlayer.trail.length > 15) {
+                    localPlayer.trail.shift();
                 }
                 
-                player.trail.forEach(t => {
+                localPlayer.trail.forEach(t => {
                     t.alpha *= 0.9;
                 });
             } else {
-                player.trail = [];
+                localPlayer.trail = [];
             }
         }
         
-        function drawBubble(x, y, scaleX, scaleY, rotation, alpha = 1) {
+        function drawBubble(x, y, scaleX, scaleY, rotation, alpha = 1, color = null) {
             const radius = DEFAULT_BUBBLE_SIZE;
             
             ctx.save();
@@ -406,11 +847,38 @@
             ctx.rotate(rotation);
             ctx.scale(scaleX, scaleY);
             
-            // Outer bubble
-            const gradient = ctx.createRadialGradient(-radius * 0.3, -radius * 0.3, radius * 0.1, 0, 0, radius);
-            gradient.addColorStop(0, `rgba(150, 200, 255, ${0.8 * alpha})`);
-            gradient.addColorStop(0.5, `rgba(100, 150, 255, ${0.6 * alpha})`);
-            gradient.addColorStop(1, `rgba(59, 130, 246, ${0.9 * alpha})`);
+            // Outer bubble - use custom color if provided, otherwise default
+            let gradient;
+            let rimColor;
+            if (color) {
+                // Parse HSL color and create gradient
+                const hslMatch = color.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+                if (hslMatch) {
+                    const h = parseInt(hslMatch[1]);
+                    const s = parseInt(hslMatch[2]);
+                    const l = parseInt(hslMatch[3]);
+                    // Create gradient with player's color
+                    gradient = ctx.createRadialGradient(-radius * 0.3, -radius * 0.3, radius * 0.1, 0, 0, radius);
+                    gradient.addColorStop(0, `hsla(${h}, ${s}%, ${Math.min(l + 20, 100)}%, ${0.8 * alpha})`);
+                    gradient.addColorStop(0.5, `hsla(${h}, ${s}%, ${l}%, ${0.6 * alpha})`);
+                    gradient.addColorStop(1, `hsla(${h}, ${Math.max(s - 10, 0)}%, ${Math.max(l - 10, 0)}%, ${0.9 * alpha})`);
+                    rimColor = `hsla(${h}, ${s}%, ${Math.min(l + 10, 100)}%, ${0.6 * alpha})`;
+                } else {
+                    // Fallback to default
+                    gradient = ctx.createRadialGradient(-radius * 0.3, -radius * 0.3, radius * 0.1, 0, 0, radius);
+                    gradient.addColorStop(0, `rgba(150, 200, 255, ${0.8 * alpha})`);
+                    gradient.addColorStop(0.5, `rgba(100, 150, 255, ${0.6 * alpha})`);
+                    gradient.addColorStop(1, `rgba(59, 130, 246, ${0.9 * alpha})`);
+                    rimColor = `rgba(200, 230, 255, ${0.6 * alpha})`;
+                }
+            } else {
+                // Default blue gradient
+                gradient = ctx.createRadialGradient(-radius * 0.3, -radius * 0.3, radius * 0.1, 0, 0, radius);
+                gradient.addColorStop(0, `rgba(150, 200, 255, ${0.8 * alpha})`);
+                gradient.addColorStop(0.5, `rgba(100, 150, 255, ${0.6 * alpha})`);
+                gradient.addColorStop(1, `rgba(59, 130, 246, ${0.9 * alpha})`);
+                rimColor = `rgba(200, 230, 255, ${0.6 * alpha})`;
+            }
             
             ctx.fillStyle = gradient;
             ctx.beginPath();
@@ -420,7 +888,7 @@
             // Highlight removed
             
             // Rim
-            ctx.strokeStyle = `rgba(200, 230, 255, ${0.6 * alpha})`;
+            ctx.strokeStyle = rimColor;
             ctx.lineWidth = 3;
             ctx.beginPath();
             ctx.arc(0, 0, radius - 2, 0, Math.PI * 2);
@@ -429,71 +897,64 @@
             ctx.restore();
         }
         
-        function draw() {
-            // Clear canvas
-            ctx.fillStyle = '#0a0a1a';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // Draw grid
-            ctx.strokeStyle = 'rgba(100, 100, 150, 0.1)';
-            ctx.lineWidth = 1;
-            for (let x = 0; x < canvas.width; x += 50) {
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, canvas.height);
-                ctx.stroke();
-            }
-            for (let y = 0; y < canvas.height; y += 50) {
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(canvas.width, y);
-                ctx.stroke();
+        function draw(timestamp) {
+            // Draw ocean background first
+            if (oceanBackground) {
+                oceanBackground.update(timestamp || 0);
+                oceanBackground.draw(timestamp || 0);
+            } else {
+                // Fallback: clear canvas if ocean background not initialized
+                ctx.fillStyle = '#0a0a1a';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
             
-            // Draw trail
-            if (DEFAULT_SHOW_TRAIL) {
-                player.trail.forEach(t => {
-                    drawBubble(t.x, t.y, t.scaleX, t.scaleY, t.rotation, t.alpha * 0.5);
-                });
-            }
-            
-            // Draw main bubble
-            drawBubble(player.x, player.y, player.scaleX, player.scaleY, player.rotation);
-            
-            // Draw velocity vector
-            if (DEFAULT_SHOW_VELOCITY && (player.vx !== 0 || player.vy !== 0)) {
-                const velMag = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
-                const velX = (player.vx / velMag) * 100;
-                const velY = (player.vy / velMag) * 100;
+            // Draw all players
+            players.forEach((player, peerId) => {
+                // Draw trail
+                if (DEFAULT_SHOW_TRAIL && player.trail) {
+                    player.trail.forEach(t => {
+                        drawBubble(t.x, t.y, t.scaleX, t.scaleY, t.rotation, t.alpha * 0.5, player.color);
+                    });
+                }
                 
-                ctx.strokeStyle = '#00ff88';
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.moveTo(player.x, player.y);
-                ctx.lineTo(player.x + velX, player.y + velY);
-                ctx.stroke();
+                // Draw main bubble
+                drawBubble(player.x, player.y, player.scaleX, player.scaleY, player.rotation, 1, player.color);
                 
-                // Arrowhead
-                const angle = Math.atan2(velY, velX);
-                ctx.fillStyle = '#00ff88';
-                ctx.beginPath();
-                ctx.moveTo(player.x + velX, player.y + velY);
-                ctx.lineTo(
-                    player.x + velX - 10 * Math.cos(angle - Math.PI / 6),
-                    player.y + velY - 10 * Math.sin(angle - Math.PI / 6)
-                );
-                ctx.lineTo(
-                    player.x + velX - 10 * Math.cos(angle + Math.PI / 6),
-                    player.y + velY - 10 * Math.sin(angle + Math.PI / 6)
-                );
-                ctx.closePath();
-                ctx.fill();
-            }
+                // Draw velocity vector (only for local player if enabled)
+                if (peerId === localPlayerId && DEFAULT_SHOW_VELOCITY && (player.vx !== 0 || player.vy !== 0)) {
+                    const velMag = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
+                    const velX = (player.vx / velMag) * 100;
+                    const velY = (player.vy / velMag) * 100;
+                    
+                    ctx.strokeStyle = '#00ff88';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(player.x, player.y);
+                    ctx.lineTo(player.x + velX, player.y + velY);
+                    ctx.stroke();
+                    
+                    // Arrowhead
+                    const angle = Math.atan2(velY, velX);
+                    ctx.fillStyle = '#00ff88';
+                    ctx.beginPath();
+                    ctx.moveTo(player.x + velX, player.y + velY);
+                    ctx.lineTo(
+                        player.x + velX - 10 * Math.cos(angle - Math.PI / 6),
+                        player.y + velY - 10 * Math.sin(angle - Math.PI / 6)
+                    );
+                    ctx.lineTo(
+                        player.x + velX - 10 * Math.cos(angle + Math.PI / 6),
+                        player.y + velY - 10 * Math.sin(angle + Math.PI / 6)
+                    );
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            });
             
-            // Update dash indicator light
+            // Update dash indicator light (only for local player)
             const dashIndicator = document.getElementById('dashIndicator');
-            if (dashIndicator) {
-                if (player.dashCooldown > 0) {
+            if (dashIndicator && localPlayer) {
+                if (localPlayer.dashCooldown > 0) {
                     dashIndicator.classList.add('cooldown');
                 } else {
                     dashIndicator.classList.remove('cooldown');
@@ -501,20 +962,420 @@
             }
         }
         
-        function gameLoop() {
+        function updateRemotePlayers() {
+            const now = Date.now();
+            const deltaTime = 16; // ~60fps
+            
+            // Update remote players with interpolation
+            players.forEach((player, peerId) => {
+                if (peerId === localPlayerId) return; // Skip local player
+                
+                // Interpolate position for smooth movement
+                const timeSinceUpdate = now - player.lastUpdateTime;
+                const interpolationFactor = Math.min(timeSinceUpdate / 100, 1); // Cap at 100ms
+                
+                player.x = lerp(player.x, player.targetX, 0.2);
+                player.y = lerp(player.y, player.targetY, 0.2);
+                player.vx = lerp(player.vx, player.targetVx, 0.3);
+                player.vy = lerp(player.vy, player.targetVy, 0.3);
+                
+                // Apply velocity to position
+                player.x += player.vx * (deltaTime / 16);
+                player.y += player.vy * (deltaTime / 16);
+                
+                // Boundary collision (same as local player)
+                const radius = player.baseRadius;
+                const bounceDamping = 0.8;
+                
+                if (player.x - radius < 0) {
+                    player.x = radius;
+                    player.vx = Math.abs(player.vx) * bounceDamping;
+                }
+                if (player.x + radius > canvas.width) {
+                    player.x = canvas.width - radius;
+                    player.vx = -Math.abs(player.vx) * bounceDamping;
+                }
+                if (player.y - radius < 0) {
+                    player.y = radius;
+                    player.vy = Math.abs(player.vy) * bounceDamping;
+                }
+                if (player.y + radius > canvas.height) {
+                    player.y = canvas.height - radius;
+                    player.vy = -Math.abs(player.vy) * bounceDamping;
+                }
+                
+                // Check collisions with other players (including local player)
+                players.forEach((otherPlayer, otherId) => {
+                    if (otherId !== peerId && otherPlayer) {
+                        resolvePlayerCollisions(player, otherPlayer);
+                    }
+                });
+                
+                // Calculate squash and stretch for remote players
+                const velocity = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
+                const maxVelocity = DEFAULT_MOVE_SPEED * 2;
+                const velocityRatio = Math.min(velocity / maxVelocity, 1);
+                
+                if (velocity > 0.5) {
+                    const angle = Math.atan2(player.vy, player.vx);
+                    player.rotation = angle;
+                    player.targetScaleX = 1 + (DEFAULT_STRETCH_INTENSITY - 1) * velocityRatio;
+                    player.targetScaleY = 1 - (1 - DEFAULT_SQUASH_INTENSITY) * velocityRatio;
+                } else {
+                    player.targetScaleX = 1;
+                    player.targetScaleY = 1;
+                    if (DEFAULT_WOBBLE_ON_IDLE) {
+                        const wobble = Math.sin(Date.now() * 0.003) * 0.05;
+                        player.targetScaleX = 1 + wobble;
+                        player.targetScaleY = 1 - wobble;
+                    }
+                }
+                
+                const deformSpeed = DEFAULT_DEFORM_SPEED;
+                player.scaleX += (player.targetScaleX - player.scaleX) * deformSpeed;
+                player.scaleY += (player.targetScaleY - player.scaleY) * deformSpeed;
+                
+                // Update trail for remote players
+                if (DEFAULT_SHOW_TRAIL) {
+                    player.trail.push({ 
+                        x: player.x, 
+                        y: player.y, 
+                        scaleX: player.scaleX,
+                        scaleY: player.scaleY,
+                        rotation: player.rotation,
+                        alpha: 1 
+                    });
+                    
+                    if (player.trail.length > 15) {
+                        player.trail.shift();
+                    }
+                    
+                    player.trail.forEach(t => {
+                        t.alpha *= 0.9;
+                    });
+                }
+            });
+        }
+        
+        function lerp(start, end, factor) {
+            return start + (end - start) * factor;
+        }
+        
+        function syncGameState() {
+            if (!localPlayer) return;
+            
+            const now = Date.now();
+            
+            // High priority sync (position, velocity) - 60fps
+            if (now - lastSyncTime >= SYNC_INTERVAL) {
+                const state = {
+                    type: 'state',
+                    id: localPlayerId,
+                    x: localPlayer.x,
+                    y: localPlayer.y,
+                    vx: localPlayer.vx,
+                    vy: localPlayer.vy
+                };
+                
+                broadcastToAll(state);
+                lastSyncTime = now;
+            }
+            
+            // Medium priority sync (scale, rotation) - 30fps
+            if (now - lastSyncTimeMedium >= SYNC_INTERVAL_MEDIUM) {
+                const state = {
+                    type: 'state_medium',
+                    id: localPlayerId,
+                    scaleX: localPlayer.scaleX,
+                    scaleY: localPlayer.scaleY,
+                    rotation: localPlayer.rotation,
+                    isDashing: localPlayer.isDashing,
+                    dashCooldown: localPlayer.dashCooldown
+                };
+                
+                broadcastToAll(state);
+                lastSyncTimeMedium = now;
+            }
+        }
+        
+        function broadcastToAll(data) {
+            connections.forEach((conn, peerId) => {
+                if (conn.open) {
+                    conn.send(data);
+                }
+            });
+        }
+        
+        let lastTime = 0;
+        function gameLoop(timestamp) {
+            // Use timestamp from requestAnimationFrame, or calculate delta
+            const time = timestamp || (lastTime += 16);
+            lastTime = time;
+            
             updatePlayer();
-            draw();
+            updateRemotePlayers();
+            syncGameState();
+            draw(time);
             requestAnimationFrame(gameLoop);
         }
         
         function resetPosition() {
-            player.x = canvas.width / 2;
-            player.y = canvas.height / 2;
-            player.vx = 0;
-            player.vy = 0;
-            player.scaleX = 1;
-            player.scaleY = 1;
-            player.trail = [];
+            if (localPlayer) {
+                localPlayer.x = canvas.width / 2;
+                localPlayer.y = canvas.height / 2;
+                localPlayer.vx = 0;
+                localPlayer.vy = 0;
+                localPlayer.scaleX = 1;
+                localPlayer.scaleY = 1;
+                localPlayer.trail = [];
+            }
+        }
+        
+        // Multiplayer functions
+        function hostGame() {
+            roomId = Math.random().toString(36).substring(2, 9);
+            localPlayerId = roomId;
+            isHost = true;
+            
+            peer = new Peer(roomId, {
+                host: '0.peerjs.com',
+                port: 443,
+                path: '/',
+                secure: true
+            });
+            
+            peer.on('open', (id) => {
+                console.log('Host peer opened with ID:', id);
+                
+                // Remove old local player if it exists
+                if (players.has('local')) {
+                    players.delete('local');
+                }
+                
+                localPlayerId = id;
+                localPlayer = createPlayer(id, true);
+                players.set(id, localPlayer);
+                
+                document.getElementById('roomIdDisplay').textContent = 'Room ID: ' + id;
+                document.getElementById('menuScreen').style.display = 'none';
+                document.getElementById('gameScreen').style.display = 'block';
+                document.getElementById('multiplayerUI').classList.remove('hidden');
+                updatePlayerList();
+            });
+            
+            peer.on('connection', (conn) => {
+                console.log('New connection from:', conn.peer);
+                setupConnection(conn);
+            });
+            
+            peer.on('error', (err) => {
+                console.error('Peer error:', err);
+            });
+        }
+        
+        function showJoinScreen() {
+            document.getElementById('menuScreen').style.display = 'none';
+            document.getElementById('joinScreen').style.display = 'block';
+        }
+        
+        function showMenuScreen() {
+            document.getElementById('joinScreen').style.display = 'none';
+            document.getElementById('menuScreen').style.display = 'block';
+        }
+        
+        function joinGame() {
+            const inputRoomId = document.getElementById('roomIdInput').value.trim();
+            if (!inputRoomId) {
+                alert('Please enter a room ID');
+                return;
+            }
+            
+            roomId = inputRoomId;
+            isHost = false;
+            
+            peer = new Peer({
+                host: '0.peerjs.com',
+                port: 443,
+                path: '/',
+                secure: true
+            });
+            
+            peer.on('open', (id) => {
+                console.log('Client peer opened with ID:', id);
+                
+                // Remove old local player if it exists
+                if (players.has('local')) {
+                    players.delete('local');
+                }
+                
+                localPlayerId = id;
+                localPlayer = createPlayer(id, true);
+                players.set(id, localPlayer);
+                
+                // Connect to host
+                const conn = peer.connect(roomId);
+                setupConnection(conn);
+                
+                document.getElementById('roomIdDisplay').textContent = 'Room ID: ' + roomId;
+                document.getElementById('joinScreen').style.display = 'none';
+                document.getElementById('gameScreen').style.display = 'block';
+                document.getElementById('multiplayerUI').classList.remove('hidden');
+            });
+            
+            peer.on('error', (err) => {
+                console.error('Peer error:', err);
+                if (err.type === 'peer-unavailable') {
+                    alert('Room not found. Please check the room ID.');
+                }
+            });
+        }
+        
+        function setupConnection(conn) {
+            conn.on('open', () => {
+                console.log('Connection opened with:', conn.peer);
+                connections.set(conn.peer, conn);
+                
+                // Send initial state to new connection
+                if (localPlayer) {
+                    conn.send({
+                        type: 'state',
+                        id: localPlayerId,
+                        x: localPlayer.x,
+                        y: localPlayer.y,
+                        vx: localPlayer.vx,
+                        vy: localPlayer.vy
+                    });
+                    conn.send({
+                        type: 'state_medium',
+                        id: localPlayerId,
+                        scaleX: localPlayer.scaleX,
+                        scaleY: localPlayer.scaleY,
+                        rotation: localPlayer.rotation,
+                        isDashing: localPlayer.isDashing,
+                        dashCooldown: localPlayer.dashCooldown
+                    });
+                }
+                
+                // If we're the host, also connect this new player to existing players
+                if (isHost) {
+                    connections.forEach((existingConn, peerId) => {
+                        if (peerId !== conn.peer && existingConn.open) {
+                            // Tell existing player about new player
+                            existingConn.send({
+                                type: 'new_player',
+                                id: conn.peer
+                            });
+                            // Tell new player about existing player
+                            conn.send({
+                                type: 'new_player',
+                                id: peerId
+                            });
+                        }
+                    });
+                }
+                
+                updatePlayerList();
+            });
+            
+            conn.on('data', (data) => {
+                handleNetworkData(data, conn.peer);
+            });
+            
+            conn.on('close', () => {
+                console.log('Connection closed with:', conn.peer);
+                connections.delete(conn.peer);
+                players.delete(conn.peer);
+                updatePlayerList();
+            });
+            
+            conn.on('error', (err) => {
+                console.error('Connection error:', err);
+            });
+        }
+        
+        function handleNetworkData(data, peerId) {
+            if (!data || !data.id) return;
+            
+            let player = players.get(data.id);
+            
+            if (data.type === 'state') {
+                // High priority state update
+                if (!player) {
+                    player = createPlayer(data.id, false);
+                    players.set(data.id, player);
+                }
+                
+                player.targetX = data.x;
+                player.targetY = data.y;
+                player.targetVx = data.vx;
+                player.targetVy = data.vy;
+                player.lastUpdateTime = Date.now();
+            } else if (data.type === 'state_medium') {
+                // Medium priority state update
+                if (!player) {
+                    player = createPlayer(data.id, false);
+                    players.set(data.id, player);
+                }
+                
+                player.scaleX = data.scaleX;
+                player.scaleY = data.scaleY;
+                player.rotation = data.rotation;
+                player.isDashing = data.isDashing;
+                player.dashCooldown = data.dashCooldown;
+            } else if (data.type === 'new_player') {
+                // Another player joined - if we're not host, we might want to connect to them too
+                // For now, just acknowledge
+                console.log('New player in room:', data.id);
+            }
+        }
+        
+        function updatePlayerList() {
+            const playerListEl = document.getElementById('playerList');
+            if (!playerListEl) return;
+            
+            playerListEl.innerHTML = '<strong>Players (' + players.size + '):</strong><br>';
+            players.forEach((player, peerId) => {
+                const isLocal = peerId === localPlayerId;
+                const statusClass = isLocal ? 'connected' : '';
+                playerListEl.innerHTML += `
+                    <div class="player-list-item">
+                        <span class="connection-status ${statusClass}"></span>
+                        Player ${peerId.substring(0, 6)}${isLocal ? ' (You)' : ''}
+                    </div>
+                `;
+            });
+        }
+        
+        function leaveGame() {
+            // Close all connections
+            connections.forEach((conn) => {
+                conn.close();
+            });
+            connections.clear();
+            
+            // Close peer
+            if (peer) {
+                peer.destroy();
+                peer = null;
+            }
+            
+            // Clear players (keep local player for single player mode)
+            players.clear();
+            localPlayer = null;
+            localPlayerId = null;
+            isHost = false;
+            roomId = null;
+            
+            // Reset UI
+            document.getElementById('multiplayerUI').classList.remove('hidden');
+            document.getElementById('gameScreen').style.display = 'none';
+            document.getElementById('menuScreen').style.display = 'block';
+            document.getElementById('joinScreen').style.display = 'none';
+            
+            // Recreate local player for single player
+            localPlayerId = 'local';
+            localPlayer = createPlayer('local', true);
+            players.set('local', localPlayer);
         }
         
         // Circular Health Bar Class
@@ -705,8 +1566,25 @@
             glowColor: '#667eea'
         });
         
+        // Initialize local player for single player mode
+        localPlayerId = 'local';
+        localPlayer = createPlayer('local', true);
+        players.set('local', localPlayer);
+        
+        // Initialize ocean background (after canvas is resized)
+        if (canvas.width > 0 && canvas.height > 0) {
+            oceanBackground = new OceanComplete(canvas);
+        } else {
+            // If canvas not ready, initialize on next frame
+            setTimeout(() => {
+                if (canvas.width > 0 && canvas.height > 0) {
+                    oceanBackground = new OceanComplete(canvas);
+                }
+            }, 100);
+        }
+        
         // Start game loop
-        gameLoop();
+        requestAnimationFrame(gameLoop);
     </script>
 </body>
 </html>
