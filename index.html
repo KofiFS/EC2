@@ -269,6 +269,46 @@
         .connection-status.connected {
             background: #00ff00;
         }
+        
+        .color-picker-widget {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(20, 20, 30, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #667eea;
+            z-index: 100;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        
+        .color-picker-widget.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        
+        .color-picker-widget h4 {
+            margin: 0 0 10px 0;
+            color: #667eea;
+            font-size: 14px;
+        }
+        
+        .color-picker-widget input[type="color"] {
+            width: 60px;
+            height: 60px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            background: none;
+        }
+        
+        .color-picker-widget label {
+            display: block;
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 8px;
+        }
     </style>
 </head>
 <body>
@@ -302,6 +342,11 @@
             <div class="health-bar-container">
                 <div id="healthBar"></div>
                 <div id="dashIndicator" class="dash-indicator"></div>
+            </div>
+            <div class="color-picker-widget" id="colorPickerWidget">
+                <h4>Color</h4>
+                <input type="color" id="colorPicker" value="#3b82f6">
+                <label>Player Color</label>
             </div>
         </div>
     </div>
@@ -392,11 +437,6 @@
             constructor(canvas) {
                 this.canvas = canvas;
                 this.ctx = ctx; // Use the global ctx instead of creating a new one
-                
-                // Initialize sub-components
-                this.initWaves();
-                this.initBubbles();
-                this.initCaustics();
             }
             
             // === WAVES ===
@@ -459,7 +499,8 @@
             // === BUBBLES ===
             initBubbles() {
                 this.bubbles = [];
-                for (let i = 0; i < 50; i++) {
+                // Reduced from 50 to 30 for better performance
+                for (let i = 0; i < 30; i++) {
                     this.bubbles.push(this.createBubble());
                 }
             }
@@ -526,7 +567,8 @@
             // === CAUSTIC LIGHT ===
             initCaustics() {
                 this.caustics = [];
-                for (let i = 0; i < 10; i++) {
+                // Reduced from 10 to 6 for better performance
+                for (let i = 0; i < 6; i++) {
                     this.caustics.push({
                         x: Math.random() * this.canvas.width,
                         y: Math.random() * this.canvas.height,
@@ -564,34 +606,24 @@
             
             // === MAIN UPDATE & DRAW ===
             update(time) {
-                this.updateWaves(time);
-                this.updateBubbles();
-                this.updateCaustics(time);
+                // Simplified - no waves, bubbles, or caustics
             }
             
             draw(time) {
-                // 1. Draw base water gradient
+                // Smooth blue gradient background with multiple color stops
                 const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
-                gradient.addColorStop(0, '#003d5c');
-                gradient.addColorStop(1, '#001a33');
+                gradient.addColorStop(0, '#004d6d');      // Light blue at top
+                gradient.addColorStop(0.3, '#003d5c');    // Medium-light blue
+                gradient.addColorStop(0.6, '#002a44');    // Medium blue
+                gradient.addColorStop(0.85, '#001f33');   // Medium-dark blue
+                gradient.addColorStop(1, '#001a33');      // Dark blue at bottom
                 this.ctx.fillStyle = gradient;
                 this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-                
-                // 2. Draw caustic light patterns
-                this.drawCaustics();
-                
-                // 3. Draw waves
-                this.drawWaves();
-                
-                // 4. Draw bubbles on top
-                this.drawBubbles();
             }
             
-            // Reinitialize when canvas resizes
+            // Reinitialize when canvas resizes (simplified - nothing to reinit)
             resize() {
-                this.initWaves();
-                this.initBubbles();
-                this.initCaustics();
+                // No-op since we only draw a gradient
             }
         }
         
@@ -608,6 +640,7 @@
             uiVisible = !uiVisible;
             const instructions = document.querySelector('.instructions');
             const multiplayerUI = document.getElementById('multiplayerUI');
+            const colorPickerWidget = document.getElementById('colorPickerWidget');
             
             if (instructions) {
                 if (uiVisible) {
@@ -622,6 +655,63 @@
                     multiplayerUI.classList.remove('hidden');
                 } else {
                     multiplayerUI.classList.add('hidden');
+                }
+            }
+            
+            if (colorPickerWidget) {
+                if (uiVisible) {
+                    colorPickerWidget.classList.remove('hidden');
+                } else {
+                    colorPickerWidget.classList.add('hidden');
+                }
+            }
+        }
+        
+        // Color picker functionality
+        function hexToHsl(hex) {
+            const r = parseInt(hex.slice(1, 3), 16) / 255;
+            const g = parseInt(hex.slice(3, 5), 16) / 255;
+            const b = parseInt(hex.slice(5, 7), 16) / 255;
+            
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+            
+            if (max === min) {
+                h = s = 0;
+            } else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+                    case g: h = ((b - r) / d + 2) / 6; break;
+                    case b: h = ((r - g) / d + 4) / 6; break;
+                }
+            }
+            
+            return `hsl(${Math.round(h * 360)}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%)`;
+        }
+        
+        function updatePlayerColor(color) {
+            if (localPlayer) {
+                localPlayer.color = hexToHsl(color);
+                // Also update in players map
+                if (localPlayerId) {
+                    players.set(localPlayerId, localPlayer);
+                }
+                // Immediately broadcast color change to other players
+                if (connections.size > 0) {
+                    const colorState = {
+                        type: 'state_medium',
+                        id: localPlayerId,
+                        scaleX: localPlayer.scaleX,
+                        scaleY: localPlayer.scaleY,
+                        rotation: localPlayer.rotation,
+                        isDashing: localPlayer.isDashing,
+                        dashCooldown: localPlayer.dashCooldown,
+                        color: localPlayer.color
+                    };
+                    broadcastToAll(colorState);
                 }
             }
         }
@@ -781,7 +871,8 @@
             const maxVelocity = speed * 2;
             const velocityRatio = Math.min(velocity / maxVelocity, 1);
             
-            const stretchIntensity = DEFAULT_STRETCH_INTENSITY;
+            // Stretch intensity: 1 for normal movement, 2 when dashing
+            const stretchIntensity = localPlayer.isDashing ? 2 : 1;
             const squashIntensity = DEFAULT_SQUASH_INTENSITY;
             
             if (velocity > 0.5) {
@@ -849,7 +940,10 @@
             
             // Outer bubble - use custom color if provided, otherwise default
             let gradient;
+            let highlightGradient;
             let rimColor;
+            let highlightColor;
+            
             if (color) {
                 // Parse HSL color and create gradient
                 const hslMatch = color.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
@@ -857,42 +951,89 @@
                     const h = parseInt(hslMatch[1]);
                     const s = parseInt(hslMatch[2]);
                     const l = parseInt(hslMatch[3]);
-                    // Create gradient with player's color
-                    gradient = ctx.createRadialGradient(-radius * 0.3, -radius * 0.3, radius * 0.1, 0, 0, radius);
-                    gradient.addColorStop(0, `hsla(${h}, ${s}%, ${Math.min(l + 20, 100)}%, ${0.8 * alpha})`);
-                    gradient.addColorStop(0.5, `hsla(${h}, ${s}%, ${l}%, ${0.6 * alpha})`);
-                    gradient.addColorStop(1, `hsla(${h}, ${Math.max(s - 10, 0)}%, ${Math.max(l - 10, 0)}%, ${0.9 * alpha})`);
-                    rimColor = `hsla(${h}, ${s}%, ${Math.min(l + 10, 100)}%, ${0.6 * alpha})`;
+                    
+                    // Enhanced radial gradient with more color stops for smoother look (more transparent)
+                    const baseAlpha = 0.75 * alpha; // Make bubble more transparent
+                    // Center the gradient at the center of the bubble
+                    gradient = ctx.createRadialGradient(0, 0, radius * 0.15, 0, 0, radius);
+                    gradient.addColorStop(0, `hsla(${h}, ${Math.min(s + 10, 100)}%, ${Math.min(l + 25, 100)}%, ${0.85 * baseAlpha})`);
+                    gradient.addColorStop(0.3, `hsla(${h}, ${s}%, ${Math.min(l + 15, 100)}%, ${0.75 * baseAlpha})`);
+                    gradient.addColorStop(0.6, `hsla(${h}, ${s}%, ${l}%, ${0.65 * baseAlpha})`);
+                    gradient.addColorStop(0.85, `hsla(${h}, ${Math.max(s - 5, 0)}%, ${Math.max(l - 5, 0)}%, ${0.75 * baseAlpha})`);
+                    gradient.addColorStop(1, `hsla(${h}, ${Math.max(s - 15, 0)}%, ${Math.max(l - 15, 0)}%, ${0.8 * baseAlpha})`);
+                    
+                    // Highlight gradient centered (more transparent)
+                    highlightGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, radius * 0.4);
+                    highlightGradient.addColorStop(0, `hsla(${h}, ${Math.min(s + 20, 100)}%, ${Math.min(l + 30, 100)}%, ${0.6 * baseAlpha})`);
+                    highlightGradient.addColorStop(0.5, `hsla(${h}, ${s}%, ${Math.min(l + 10, 100)}%, ${0.3 * baseAlpha})`);
+                    highlightGradient.addColorStop(1, `hsla(${h}, ${s}%, ${l}%, 0)`);
+                    
+                    rimColor = `hsla(${h}, ${Math.min(s + 15, 100)}%, ${Math.min(l + 15, 100)}%, ${0.6 * baseAlpha})`;
+                    highlightColor = `hsla(${h}, ${Math.min(s + 25, 100)}%, ${Math.min(l + 35, 100)}%, ${0.4 * baseAlpha})`;
                 } else {
                     // Fallback to default
-                    gradient = ctx.createRadialGradient(-radius * 0.3, -radius * 0.3, radius * 0.1, 0, 0, radius);
-                    gradient.addColorStop(0, `rgba(150, 200, 255, ${0.8 * alpha})`);
-                    gradient.addColorStop(0.5, `rgba(100, 150, 255, ${0.6 * alpha})`);
+                    gradient = ctx.createRadialGradient(-radius * 0.35, -radius * 0.35, radius * 0.15, 0, 0, radius);
+                    gradient.addColorStop(0, `rgba(180, 220, 255, ${0.95 * alpha})`);
+                    gradient.addColorStop(0.3, `rgba(150, 200, 255, ${0.85 * alpha})`);
+                    gradient.addColorStop(0.6, `rgba(100, 150, 255, ${0.75 * alpha})`);
+                    gradient.addColorStop(0.85, `rgba(70, 130, 246, ${0.85 * alpha})`);
                     gradient.addColorStop(1, `rgba(59, 130, 246, ${0.9 * alpha})`);
-                    rimColor = `rgba(200, 230, 255, ${0.6 * alpha})`;
+                    
+                    highlightGradient = ctx.createRadialGradient(-radius * 0.25, -radius * 0.25, 0, -radius * 0.25, -radius * 0.25, radius * 0.4);
+                    highlightGradient.addColorStop(0, `rgba(220, 240, 255, ${0.7 * alpha})`);
+                    highlightGradient.addColorStop(0.5, `rgba(180, 220, 255, ${0.4 * alpha})`);
+                    highlightGradient.addColorStop(1, `rgba(150, 200, 255, 0)`);
+                    
+                    rimColor = `rgba(220, 240, 255, ${0.7 * alpha})`;
+                    highlightColor = `rgba(240, 250, 255, ${0.5 * alpha})`;
                 }
             } else {
-                // Default blue gradient
-                gradient = ctx.createRadialGradient(-radius * 0.3, -radius * 0.3, radius * 0.1, 0, 0, radius);
-                gradient.addColorStop(0, `rgba(150, 200, 255, ${0.8 * alpha})`);
-                gradient.addColorStop(0.5, `rgba(100, 150, 255, ${0.6 * alpha})`);
-                gradient.addColorStop(1, `rgba(59, 130, 246, ${0.9 * alpha})`);
-                rimColor = `rgba(200, 230, 255, ${0.6 * alpha})`;
+                // Enhanced default blue gradient (more transparent)
+                const baseAlpha = 0.75 * alpha; // Make bubble more transparent
+                // Center the gradient at the center of the bubble
+                gradient = ctx.createRadialGradient(0, 0, radius * 0.15, 0, 0, radius);
+                gradient.addColorStop(0, `rgba(180, 220, 255, ${0.85 * baseAlpha})`);
+                gradient.addColorStop(0.3, `rgba(150, 200, 255, ${0.75 * baseAlpha})`);
+                gradient.addColorStop(0.6, `rgba(100, 150, 255, ${0.65 * baseAlpha})`);
+                gradient.addColorStop(0.85, `rgba(70, 130, 246, ${0.75 * baseAlpha})`);
+                gradient.addColorStop(1, `rgba(59, 130, 246, ${0.8 * baseAlpha})`);
+                
+                // Highlight gradient centered (more transparent)
+                highlightGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, radius * 0.4);
+                highlightGradient.addColorStop(0, `rgba(220, 240, 255, ${0.6 * baseAlpha})`);
+                highlightGradient.addColorStop(0.5, `rgba(180, 220, 255, ${0.3 * baseAlpha})`);
+                highlightGradient.addColorStop(1, `rgba(150, 200, 255, 0)`);
+                
+                rimColor = `rgba(220, 240, 255, ${0.6 * baseAlpha})`;
+                highlightColor = `rgba(240, 250, 255, ${0.4 * baseAlpha})`;
             }
             
+            // Draw main bubble with enhanced gradient
             ctx.fillStyle = gradient;
             ctx.beginPath();
             ctx.arc(0, 0, radius, 0, Math.PI * 2);
             ctx.fill();
             
-            // Highlight removed
+            // Draw highlight for more 3D bubble effect (centered)
+            ctx.fillStyle = highlightGradient;
+            ctx.beginPath();
+            ctx.arc(0, 0, radius * 0.4, 0, Math.PI * 2);
+            ctx.fill();
             
-            // Rim
+            // Small highlight spot removed (white dot)
+            
+            // Enhanced rim with glow effect
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = rimColor;
             ctx.strokeStyle = rimColor;
             ctx.lineWidth = 3;
             ctx.beginPath();
             ctx.arc(0, 0, radius - 2, 0, Math.PI * 2);
             ctx.stroke();
+            
+            // Reset shadow
+            ctx.shadowBlur = 0;
+            ctx.shadowColor = 'transparent';
             
             ctx.restore();
         }
@@ -1016,10 +1157,13 @@
                 const maxVelocity = DEFAULT_MOVE_SPEED * 2;
                 const velocityRatio = Math.min(velocity / maxVelocity, 1);
                 
+                // Stretch intensity: 1 for normal movement, 2 when dashing
+                const stretchIntensity = player.isDashing ? 2 : 1;
+                
                 if (velocity > 0.5) {
                     const angle = Math.atan2(player.vy, player.vx);
                     player.rotation = angle;
-                    player.targetScaleX = 1 + (DEFAULT_STRETCH_INTENSITY - 1) * velocityRatio;
+                    player.targetScaleX = 1 + (stretchIntensity - 1) * velocityRatio;
                     player.targetScaleY = 1 - (1 - DEFAULT_SQUASH_INTENSITY) * velocityRatio;
                 } else {
                     player.targetScaleX = 1;
@@ -1081,7 +1225,7 @@
                 lastSyncTime = now;
             }
             
-            // Medium priority sync (scale, rotation) - 30fps
+            // Medium priority sync (scale, rotation, color) - 30fps
             if (now - lastSyncTimeMedium >= SYNC_INTERVAL_MEDIUM) {
                 const state = {
                     type: 'state_medium',
@@ -1090,7 +1234,8 @@
                     scaleY: localPlayer.scaleY,
                     rotation: localPlayer.rotation,
                     isDashing: localPlayer.isDashing,
-                    dashCooldown: localPlayer.dashCooldown
+                    dashCooldown: localPlayer.dashCooldown,
+                    color: localPlayer.color // Sync color to other players
                 };
                 
                 broadcastToAll(state);
@@ -1154,6 +1299,11 @@
                 
                 localPlayerId = id;
                 localPlayer = createPlayer(id, true);
+                // Apply color from color picker
+                const colorPicker = document.getElementById('colorPicker');
+                if (colorPicker && localPlayer) {
+                    localPlayer.color = hexToHsl(colorPicker.value);
+                }
                 players.set(id, localPlayer);
                 
                 document.getElementById('roomIdDisplay').textContent = 'Room ID: ' + id;
@@ -1210,6 +1360,11 @@
                 
                 localPlayerId = id;
                 localPlayer = createPlayer(id, true);
+                // Apply color from color picker
+                const colorPicker = document.getElementById('colorPicker');
+                if (colorPicker && localPlayer) {
+                    localPlayer.color = hexToHsl(colorPicker.value);
+                }
                 players.set(id, localPlayer);
                 
                 // Connect to host
@@ -1252,7 +1407,8 @@
                         scaleY: localPlayer.scaleY,
                         rotation: localPlayer.rotation,
                         isDashing: localPlayer.isDashing,
-                        dashCooldown: localPlayer.dashCooldown
+                        dashCooldown: localPlayer.dashCooldown,
+                        color: localPlayer.color // Send color to new connection
                     });
                 }
                 
@@ -1322,6 +1478,10 @@
                 player.rotation = data.rotation;
                 player.isDashing = data.isDashing;
                 player.dashCooldown = data.dashCooldown;
+                // Update color if provided
+                if (data.color) {
+                    player.color = data.color;
+                }
             } else if (data.type === 'new_player') {
                 // Another player joined - if we're not host, we might want to connect to them too
                 // For now, just acknowledge
@@ -1375,6 +1535,11 @@
             // Recreate local player for single player
             localPlayerId = 'local';
             localPlayer = createPlayer('local', true);
+            // Reset color from color picker
+            const colorPicker = document.getElementById('colorPicker');
+            if (colorPicker && localPlayer) {
+                localPlayer.color = hexToHsl(colorPicker.value);
+            }
             players.set('local', localPlayer);
         }
         
@@ -1569,6 +1734,11 @@
         // Initialize local player for single player mode
         localPlayerId = 'local';
         localPlayer = createPlayer('local', true);
+        // Set default color from color picker if available
+        const defaultColorPicker = document.getElementById('colorPicker');
+        if (defaultColorPicker && localPlayer) {
+            localPlayer.color = hexToHsl(defaultColorPicker.value);
+        }
         players.set('local', localPlayer);
         
         // Initialize ocean background (after canvas is resized)
@@ -1581,6 +1751,14 @@
                     oceanBackground = new OceanComplete(canvas);
                 }
             }, 100);
+        }
+        
+        // Setup color picker
+        const colorPicker = document.getElementById('colorPicker');
+        if (colorPicker) {
+            colorPicker.addEventListener('input', (e) => {
+                updatePlayerColor(e.target.value);
+            });
         }
         
         // Start game loop
