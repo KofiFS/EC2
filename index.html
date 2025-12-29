@@ -309,45 +309,317 @@
             color: #aaa;
             margin-top: 8px;
         }
+        
+        /* Menu Widget - Small compact design */
+        .menu-widget {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 200;
+            background: rgba(20, 20, 30, 0.95);
+            border-radius: 8px;
+            border: 2px solid #667eea;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .menu-widget.collapsed {
+            width: auto;
+            min-width: 120px;
+        }
+        
+        .menu-widget.expanded {
+            width: 280px;
+            min-height: 200px;
+        }
+        
+        .menu-toggle-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            width: 100%;
+            transition: transform 0.2s;
+        }
+        
+        .menu-toggle-button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .menu-content {
+            display: none;
+            padding: 15px;
+        }
+        
+        .menu-widget.expanded .menu-content {
+            display: block;
+        }
+        
+        .menu-screen {
+            display: none;
+        }
+        
+        .menu-screen.active {
+            display: block;
+        }
+        
+        .menu-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            width: 100%;
+            margin: 6px 0;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .menu-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 10px rgba(102, 126, 234, 0.4);
+        }
+        
+        .menu-button:active {
+            transform: translateY(0);
+        }
+        
+        .menu-input {
+            background: rgba(10, 10, 20, 0.8);
+            border: 1px solid #333;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            width: calc(100% - 24px);
+            margin: 8px 0;
+        }
+        
+        .menu-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+        }
+        
+        .menu-widget .room-id-display {
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            color: #667eea;
+            text-align: center;
+            word-break: break-all;
+        }
+        
+        .menu-widget .player-list {
+            margin: 10px 0;
+            font-size: 11px;
+            color: #aaa;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+        
+        .menu-widget .player-list-item {
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .menu-widget .connection-status {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            margin-right: 6px;
+            background: #ff0000;
+        }
+        
+        .menu-widget .connection-status.connected {
+            background: #00ff00;
+        }
+        
+        .menu-widget .controls-info {
+            background: rgba(10, 10, 20, 0.5);
+            padding: 12px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+        
+        .menu-widget .controls-info .key {
+            display: inline-block;
+            background: #667eea;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin: 0 2px;
+            font-weight: 600;
+            font-size: 11px;
+        }
+        
+        .menu-widget .color-picker-container {
+            text-align: center;
+            margin: 15px 0;
+        }
+        
+        .menu-widget .color-picker-container h4 {
+            margin: 0 0 10px 0;
+            color: #667eea;
+            font-size: 14px;
+        }
+        
+        .menu-widget .color-picker-container input[type="color"] {
+            width: 60px;
+            height: 60px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            background: none;
+        }
+        
+        .menu-widget .color-picker-container label {
+            display: block;
+            font-size: 11px;
+            color: #aaa;
+            margin-top: 8px;
+        }
+        
+        .menu-widget h3 {
+            margin: 0 0 12px 0;
+            color: #667eea;
+            font-size: 16px;
+        }
+        
+        .version-info {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 10;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 12px;
+            font-family: monospace;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
-    <div class="multiplayer-ui" id="multiplayerUI">
-        <h3>Multiplayer</h3>
-        <div id="menuScreen">
-            <button onclick="hostGame()">Host Game</button>
-            <button onclick="showJoinScreen()">Join Game</button>
-        </div>
-        <div id="joinScreen" style="display: none;">
-            <input type="text" id="roomIdInput" placeholder="Enter Room ID">
-            <button onclick="joinGame()">Connect</button>
-            <button onclick="showMenuScreen()">Back</button>
-        </div>
-        <div id="gameScreen" style="display: none;">
-            <div class="room-id-display" id="roomIdDisplay"></div>
-            <div class="player-list" id="playerList"></div>
-            <button onclick="leaveGame()">Leave Game</button>
+    <div class="menu-widget collapsed" id="menuWidget">
+        <button class="menu-toggle-button" onclick="toggleMenuWidget()">Menu</button>
+        <div class="menu-content">
+            <!-- Main Menu Screen -->
+            <div class="menu-screen active" id="mainMenuScreen">
+                <button class="menu-button" onclick="resumeGame()">Resume</button>
+                <button class="menu-button" onclick="showVSMenu()">VS</button>
+                <button class="menu-button" onclick="showMultiplayerMenu()">Multiplayer</button>
+                <button class="menu-button" id="challengesButton" onclick="showChallengesMenu()" style="display: none;">Challenges</button>
+                <button class="menu-button" onclick="showControlsMenu()">Controls</button>
+                <button class="menu-button" onclick="showCustomizeMenu()">Customize</button>
+                <button class="menu-button" onclick="quitGame()">Quit</button>
+            </div>
+            
+            <!-- Multiplayer Menu Screen -->
+            <div class="menu-screen" id="multiplayerMenuScreen">
+                <h3>Multiplayer</h3>
+                <button class="menu-button" onclick="hostGame()">Host Game</button>
+                <button class="menu-button" onclick="showJoinScreen()">Join Game</button>
+                <button class="menu-button" onclick="showMainMenu()">Back</button>
+            </div>
+            
+            <!-- Join Game Screen -->
+            <div class="menu-screen" id="joinGameScreen">
+                <h3>Join Game</h3>
+                <input type="text" class="menu-input" id="roomIdInput" placeholder="Enter Room ID">
+                <button class="menu-button" onclick="joinGame()">Connect</button>
+                <button class="menu-button" onclick="showMultiplayerMenu()">Back</button>
+            </div>
+            
+            <!-- Game Screen (when in multiplayer) -->
+            <div class="menu-screen" id="gameScreen">
+                <h3>Multiplayer</h3>
+                <div class="room-id-display" id="roomIdDisplay"></div>
+                <div class="player-list" id="playerList"></div>
+                <button class="menu-button" onclick="leaveGame()">Leave Game</button>
+                <button class="menu-button" onclick="showMainMenu()">Back to Menu</button>
+            </div>
+            
+            <!-- Controls Screen -->
+            <div class="menu-screen" id="controlsScreen">
+                <h3>Controls</h3>
+                <div class="controls-info">
+                    <div><strong>Movement:</strong></div>
+                    <div><span class="key">W A S D</span> or <span class="key">Arrow Keys</span> - Move</div>
+                    <div><span class="key">Space</span> - Dash</div>
+                    <div><span class="key">Click</span> - Move to mouse</div>
+                    <div style="margin-top: 10px;"><strong>Menu:</strong></div>
+                    <div><span class="key">ESC</span> or <span class="key">P</span> - Toggle Menu</div>
+                </div>
+                <button class="menu-button" onclick="showMainMenu()">Back</button>
+            </div>
+            
+            <!-- Customize Screen -->
+            <div class="menu-screen" id="customizeScreen">
+                <h3>Customize</h3>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; color: #aaa; font-size: 12px; margin-bottom: 5px;">Player Name</label>
+                    <input type="text" class="menu-input" id="playerNameInput" placeholder="Enter your name" maxlength="20">
+                </div>
+                <div class="color-picker-container">
+                    <h4>Player Color</h4>
+                    <input type="color" id="colorPicker" value="#3b82f6">
+                    <label>Choose your bubble color</label>
+                </div>
+                <div style="margin-top: 15px;">
+                    <label style="display: block; color: #aaa; font-size: 12px; margin-bottom: 5px;">Actor Image</label>
+                    <input type="file" id="actorImageInput" accept="image/*" style="display: none;">
+                    <button class="menu-button" onclick="document.getElementById('actorImageInput').click()" style="margin: 0;">Choose Image</button>
+                    <div id="imagePreview" style="margin-top: 10px; text-align: center; display: none;">
+                        <img id="previewImg" style="max-width: 60px; max-height: 60px; border-radius: 4px; border: 2px solid #667eea;">
+                        <button class="menu-button" onclick="clearImage()" style="margin-top: 5px; padding: 5px 10px; font-size: 12px;">Remove Image</button>
+                    </div>
+                </div>
+                <button class="menu-button" onclick="showMainMenu()">Back</button>
+            </div>
+            
+            <!-- VS Menu Screen -->
+            <div class="menu-screen" id="vsMenuScreen">
+                <h3>VS Matchmaking</h3>
+                <div id="queueStatus" style="color: #aaa; font-size: 12px; margin-bottom: 10px; text-align: center;">Not in queue</div>
+                <button class="menu-button" id="queue1v1Button" onclick="joinQueue('1v1')">1v1</button>
+                <button class="menu-button" id="queue2v2Button" onclick="joinQueue('2v2')">2v2</button>
+                <button class="menu-button" id="cancelQueueButton" onclick="cancelQueue()" style="display: none;">Cancel Queue</button>
+                <button class="menu-button" onclick="showMainMenu()">Back</button>
+            </div>
+            
+            <!-- Challenges Menu Screen -->
+            <div class="menu-screen" id="challengesMenuScreen">
+                <h3>Challenges</h3>
+                <button class="menu-button" onclick="startSpikeDodge()">Spike Dodge</button>
+                <div style="color: #aaa; font-size: 11px; margin-top: 10px; text-align: center;">
+                    Dodge falling spikes!<br>
+                    They get faster and more numerous over time.
+                </div>
+                <button class="menu-button" onclick="showMainMenu()">Back</button>
+            </div>
         </div>
     </div>
     
     <div class="container">
         <div class="canvas-container">
             <canvas id="gameCanvas"></canvas>
-            <div class="instructions">
-                <div>🎮 <strong>Controls:</strong></div>
-                <div><span class="key">W A S D</span> or <span class="key">Arrow Keys</span> - Move</div>
-                <div><span class="key">Space</span> - Dash</div>
-                <div><span class="key">Click</span> - Move to mouse</div>
-            </div>
             <div class="health-bar-container">
                 <div id="healthBar"></div>
                 <div id="dashIndicator" class="dash-indicator"></div>
             </div>
-            <div class="color-picker-widget" id="colorPickerWidget">
-                <h4>Color</h4>
-                <input type="color" id="colorPicker" value="#3b82f6">
-                <label>Player Color</label>
-            </div>
+            <div class="version-info" id="versionInfo">v1.0.0</div>
         </div>
     </div>
 
@@ -397,9 +669,33 @@
         const SYNC_INTERVAL_MEDIUM = 1000 / 30; // 30fps for scale/rotation
         let lastSyncTimeMedium = 0;
         
+        // Image cache for player images
+        const imageCache = new Map(); // imageData -> Image object
+        
+        // Matchmaking state
+        let inQueue = false;
+        let queueMode = null; // '1v1' or '2v2'
+        let matchmakingPeer = null;
+        let matchmakingConnections = new Map();
+        let matchInProgress = false;
+        let playerTeams = new Map(); // playerId -> team (1 or 2)
+        let team1Players = [];
+        let team2Players = [];
+        
+        // Challenges/Game modes state
+        let currentGameMode = null; // 'spike_dodge' or null
+        let spikes = [];
+        let spikeSpawnTimer = 0;
+        let spikeSpeed = 2;
+        let spikeSpawnRate = 2000; // milliseconds
+        let gameStartTime = 0;
+        let spikesDodged = 0;
+        let playerDead = false;
+        let deathParticles = [];
+        
         // Player bubble - initialize after canvas is resized
         function createPlayer(id, isLocal = false) {
-            return {
+            const player = {
                 id: id,
                 x: canvas.width / 2 + (Math.random() - 0.5) * 100,
                 y: canvas.height / 2 + (Math.random() - 0.5) * 100,
@@ -415,6 +711,12 @@
                 dashCooldown: 0,
                 trail: [],
                 color: isLocal ? null : generatePlayerColor(id), // Local player uses default, others get unique colors
+                name: null,
+                image: null,
+                health: 100,
+                maxHealth: 100,
+                lastCollisionTime: 0, // Prevent multiple damage from same collision
+                dead: false,
                 // Interpolation for smooth remote player movement
                 targetX: 0,
                 targetY: 0,
@@ -422,6 +724,24 @@
                 targetVy: 0,
                 lastUpdateTime: Date.now()
             };
+            
+            // Load saved name and image for local player
+            if (isLocal) {
+                try {
+                    const savedName = localStorage.getItem('playerName');
+                    if (savedName) {
+                        player.name = savedName;
+                    }
+                    const savedImage = localStorage.getItem('playerImage');
+                    if (savedImage) {
+                        player.image = savedImage;
+                    }
+                } catch (e) {
+                    console.warn('Could not load player data from localStorage:', e);
+                }
+            }
+            
+            return player;
         }
         
         function generatePlayerColor(id) {
@@ -437,6 +757,71 @@
             constructor(canvas) {
                 this.canvas = canvas;
                 this.ctx = ctx; // Use the global ctx instead of creating a new one
+                this.initParticles();
+            }
+            
+            initParticles() {
+                this.particles = [];
+                const particleCount = 80; // Number of background particles
+                
+                for (let i = 0; i < particleCount; i++) {
+                    this.particles.push({
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        radius: 1 + Math.random() * 2,
+                        speedX: (Math.random() - 0.5) * 0.5,
+                        speedY: (Math.random() - 0.5) * 0.5,
+                        opacity: 0.3 + Math.random() * 0.4,
+                        color: this.getRandomParticleColor()
+                    });
+                }
+            }
+            
+            getRandomParticleColor() {
+                const colors = [
+                    'rgba(100, 200, 255, ', // Light blue
+                    'rgba(150, 220, 255, ', // Cyan
+                    'rgba(200, 240, 255, ', // Very light blue
+                    'rgba(100, 180, 255, ', // Medium blue
+                    'rgba(59, 130, 246, '   // Blue
+                ];
+                return colors[Math.floor(Math.random() * colors.length)];
+            }
+            
+            updateParticles() {
+                this.particles.forEach(particle => {
+                    // Update position
+                    particle.x += particle.speedX;
+                    particle.y += particle.speedY;
+                    
+                    // Wrap around edges
+                    if (particle.x < 0) particle.x = this.canvas.width;
+                    if (particle.x > this.canvas.width) particle.x = 0;
+                    if (particle.y < 0) particle.y = this.canvas.height;
+                    if (particle.y > this.canvas.height) particle.y = 0;
+                    
+                    // Subtle opacity variation
+                    particle.opacity += (Math.random() - 0.5) * 0.02;
+                    particle.opacity = Math.max(0.2, Math.min(0.7, particle.opacity));
+                });
+            }
+            
+            drawParticles() {
+                this.particles.forEach(particle => {
+                    this.ctx.save();
+                    this.ctx.globalAlpha = particle.opacity;
+                    this.ctx.fillStyle = particle.color + particle.opacity + ')';
+                    
+                    // Draw particle with glow effect
+                    this.ctx.shadowBlur = 5;
+                    this.ctx.shadowColor = particle.color + particle.opacity + ')';
+                    
+                    this.ctx.beginPath();
+                    this.ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    this.ctx.restore();
+                });
             }
             
             // === WAVES ===
@@ -606,7 +991,7 @@
             
             // === MAIN UPDATE & DRAW ===
             update(time) {
-                // Simplified - no waves, bubbles, or caustics
+                this.updateParticles();
             }
             
             draw(time) {
@@ -619,11 +1004,15 @@
                 gradient.addColorStop(1, '#001a33');      // Dark blue at bottom
                 this.ctx.fillStyle = gradient;
                 this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw particles on top of gradient
+                this.drawParticles();
             }
             
-            // Reinitialize when canvas resizes (simplified - nothing to reinit)
+            // Reinitialize when canvas resizes
             resize() {
-                // No-op since we only draw a gradient
+                // Reinitialize particles with new canvas size
+                this.initParticles();
             }
         }
         
@@ -636,34 +1025,733 @@
         // UI visibility state
         let uiVisible = true;
         
-        function toggleUI() {
-            uiVisible = !uiVisible;
-            const instructions = document.querySelector('.instructions');
-            const multiplayerUI = document.getElementById('multiplayerUI');
-            const colorPickerWidget = document.getElementById('colorPickerWidget');
+        // Menu state - Game is never paused, menu is just an overlay
+        let menuVisible = false;
+        
+        function toggleMenuWidget() {
+            const menuWidget = document.getElementById('menuWidget');
+            if (!menuWidget) return;
             
-            if (instructions) {
-                if (uiVisible) {
-                    instructions.classList.remove('hidden');
+            menuVisible = !menuVisible;
+            
+            if (menuVisible) {
+                menuWidget.classList.remove('collapsed');
+                menuWidget.classList.add('expanded');
+                showMainMenu();
+            } else {
+                menuWidget.classList.remove('expanded');
+                menuWidget.classList.add('collapsed');
+            }
+        }
+        
+        function toggleMenu() {
+            toggleMenuWidget();
+        }
+        
+        function showMainMenu() {
+            hideAllScreens();
+            document.getElementById('mainMenuScreen').classList.add('active');
+            updateChallengesButtonVisibility();
+        }
+        
+        function showVSMenu() {
+            hideAllScreens();
+            document.getElementById('vsMenuScreen').classList.add('active');
+            updateQueueStatus();
+        }
+        
+        function showChallengesMenu() {
+            hideAllScreens();
+            document.getElementById('challengesMenuScreen').classList.add('active');
+        }
+        
+        function updateChallengesButtonVisibility() {
+            const challengesButton = document.getElementById('challengesButton');
+            if (challengesButton) {
+                const isAlone = (!isHost && !roomId && players.size <= 1);
+                const isHosting = isHost;
+                challengesButton.style.display = (isAlone || isHosting) ? 'block' : 'none';
+            }
+        }
+        
+        // Matchmaking functions
+        function joinQueue(mode) {
+            if (inQueue) {
+                cancelQueue();
+            }
+            
+            queueMode = mode;
+            inQueue = true;
+            updateQueueStatus();
+            
+            // Initialize matchmaking peer
+            matchmakingPeer = new Peer({
+                secure: true
+            });
+            
+            matchmakingPeer.on('open', (id) => {
+                console.log('Matchmaking peer opened:', id);
+                // Broadcast queue request
+                broadcastQueueRequest();
+            });
+            
+            matchmakingPeer.on('connection', (conn) => {
+                conn.on('open', () => {
+                    matchmakingConnections.set(conn.peer, conn);
+                    handleMatchmakingData(conn);
+                });
+            });
+            
+            matchmakingPeer.on('error', (err) => {
+                console.error('Matchmaking peer error:', err);
+            });
+            
+            // Update UI
+            document.getElementById('queue1v1Button').style.display = 'none';
+            document.getElementById('queue2v2Button').style.display = 'none';
+            document.getElementById('cancelQueueButton').style.display = 'block';
+        }
+        
+        function cancelQueue() {
+            inQueue = false;
+            queueMode = null;
+            
+            if (matchmakingPeer) {
+                matchmakingPeer.destroy();
+                matchmakingPeer = null;
+            }
+            matchmakingConnections.clear();
+            
+            updateQueueStatus();
+            document.getElementById('queue1v1Button').style.display = 'block';
+            document.getElementById('queue2v2Button').style.display = 'block';
+            document.getElementById('cancelQueueButton').style.display = 'none';
+        }
+        
+        function updateQueueStatus() {
+            const statusEl = document.getElementById('queueStatus');
+            if (statusEl) {
+                if (inQueue) {
+                    statusEl.textContent = `Searching for ${queueMode} match...`;
+                    statusEl.style.color = '#667eea';
                 } else {
-                    instructions.classList.add('hidden');
+                    statusEl.textContent = 'Not in queue';
+                    statusEl.style.color = '#aaa';
+                }
+            }
+        }
+        
+        function broadcastQueueRequest() {
+            // In a real implementation, you'd connect to a matchmaking server
+            // For now, this is a placeholder that simulates matchmaking
+            console.log('Broadcasting queue request for', queueMode);
+            // TODO: Implement actual matchmaking server connection
+        }
+        
+        function handleMatchmakingData(conn) {
+            conn.on('data', (data) => {
+                console.log('Matchmaking data received:', data);
+                // Handle matchmaking responses
+            });
+        }
+        
+        // Challenges/Game Modes
+        function startSpikeDodge() {
+            // Reset game state
+            currentGameMode = 'spike_dodge';
+            spikes = [];
+            spikeSpawnTimer = 0;
+            spikeSpeed = 2;
+            spikeSpawnRate = 2000;
+            gameStartTime = Date.now();
+            
+            // Reset player position to center
+            if (localPlayer) {
+                localPlayer.x = canvas.width / 2;
+                localPlayer.y = canvas.height / 2;
+                localPlayer.vx = 0;
+                localPlayer.vy = 0;
+            }
+            
+            // Reset health
+            if (healthBar) {
+                healthBar.setHealth(100);
+            }
+            
+            // Hide menu
+            resumeGame();
+        }
+        
+        function updateSpikeDodge(deltaTime) {
+            if (currentGameMode !== 'spike_dodge' || playerDead) return;
+            
+            const elapsed = (Date.now() - gameStartTime) / 1000; // seconds
+            
+            // Increase difficulty over time
+            spikeSpeed = 2 + elapsed * 0.5;
+            spikeSpawnRate = Math.max(500, 2000 - elapsed * 50);
+            
+            // Spawn spikes
+            spikeSpawnTimer += deltaTime;
+            if (spikeSpawnTimer >= spikeSpawnRate) {
+                spikeSpawnTimer = 0;
+                spawnSpike();
+            }
+            
+            // Update spikes
+            for (let i = spikes.length - 1; i >= 0; i--) {
+                const spike = spikes[i];
+                spike.y += spikeSpeed;
+                
+                // Remove if off screen
+                if (spike.y > canvas.height + 20) {
+                    spikes.splice(i, 1);
+                    spikesDodged++; // Count dodged spikes
+                    continue;
+                }
+                
+                // Check collision with player (only if player is alive and visible)
+                if (localPlayer && !playerDead && localPlayer.visible !== false) {
+                    const dx = spike.x - localPlayer.x;
+                    const dy = spike.y - localPlayer.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const collisionDist = spike.radius + localPlayer.baseRadius;
+                    
+                    if (dist < collisionDist) {
+                        // Player hit!
+                        if (healthBar) {
+                            healthBar.takeDamage(20);
+                        }
+                        // Remove spike
+                        spikes.splice(i, 1);
+                    }
                 }
             }
             
-            if (multiplayerUI) {
-                if (uiVisible) {
-                    multiplayerUI.classList.remove('hidden');
-                } else {
-                    multiplayerUI.classList.add('hidden');
+            // Update death particles
+            updateDeathParticles();
+        }
+        
+        function spawnSpike() {
+            const spike = {
+                x: Math.random() * canvas.width,
+                y: -20,
+                radius: 8 + Math.random() * 12,
+                color: `hsl(${Math.random() * 60 + 0}, 70%, 50%)` // Red to orange
+            };
+            spikes.push(spike);
+        }
+        
+        function drawSpikes() {
+            if (currentGameMode !== 'spike_dodge') return;
+            
+            spikes.forEach(spike => {
+                ctx.save();
+                ctx.translate(spike.x, spike.y);
+                
+                const size = spike.radius;
+                
+                // Draw 3D spike pointing downward
+                // Main triangle (pointing down)
+                ctx.fillStyle = spike.color;
+                ctx.beginPath();
+                ctx.moveTo(0, size); // Bottom point
+                ctx.lineTo(-size * 0.6, -size * 0.3); // Top left
+                ctx.lineTo(size * 0.6, -size * 0.3); // Top right
+                ctx.closePath();
+                ctx.fill();
+                
+                // Add darker side for 3D effect
+                const darkerColor = spike.color.replace('50%)', '35%)');
+                ctx.fillStyle = darkerColor;
+                ctx.beginPath();
+                ctx.moveTo(0, size);
+                ctx.lineTo(-size * 0.6, -size * 0.3);
+                ctx.lineTo(-size * 0.4, -size * 0.1);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Highlight for 3D effect
+                const lighterColor = spike.color.replace('50%)', '65%)');
+                ctx.fillStyle = lighterColor;
+                ctx.beginPath();
+                ctx.moveTo(0, size);
+                ctx.lineTo(size * 0.6, -size * 0.3);
+                ctx.lineTo(size * 0.4, -size * 0.1);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Add glow
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = spike.color;
+                ctx.strokeStyle = spike.color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, size);
+                ctx.lineTo(-size * 0.6, -size * 0.3);
+                ctx.lineTo(size * 0.6, -size * 0.3);
+                ctx.closePath();
+                ctx.stroke();
+                
+                ctx.restore();
+            });
+        }
+        
+        function triggerDeathEffect() {
+            if (!localPlayer) return;
+            
+            // Create death particles
+            for (let i = 0; i < 30; i++) {
+                const angle = (Math.PI * 2 * i) / 30;
+                const speed = 2 + Math.random() * 3;
+                deathParticles.push({
+                    x: localPlayer.x,
+                    y: localPlayer.y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 1.0,
+                    decay: 0.02 + Math.random() * 0.03,
+                    size: 3 + Math.random() * 5,
+                    color: localPlayer.color || 'hsl(200, 70%, 60%)'
+                });
+            }
+            
+            // Hide player
+            if (localPlayer) {
+                localPlayer.visible = false;
+            }
+            
+            // Show death screen if in challenge mode
+            if (currentGameMode === 'spike_dodge') {
+                setTimeout(() => {
+                    showDeathScreen();
+                }, 1000);
+            }
+        }
+        
+        function updateDeathParticles() {
+            for (let i = deathParticles.length - 1; i >= 0; i--) {
+                const particle = deathParticles[i];
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.life -= particle.decay;
+                particle.vx *= 0.98;
+                particle.vy *= 0.98;
+                
+                if (particle.life <= 0) {
+                    deathParticles.splice(i, 1);
+                }
+            }
+        }
+        
+        function drawDeathParticles() {
+            deathParticles.forEach(particle => {
+                ctx.save();
+                ctx.globalAlpha = particle.life;
+                ctx.fillStyle = particle.color;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = particle.color;
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+        
+        function showDeathScreen() {
+            // Create death screen overlay
+            const deathScreen = document.getElementById('deathScreen');
+            if (deathScreen) {
+                deathScreen.style.display = 'block';
+                document.getElementById('spikesDodgedCount').textContent = spikesDodged;
+            } else {
+                // Create death screen if it doesn't exist
+                const screen = document.createElement('div');
+                screen.id = 'deathScreen';
+                screen.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.8);
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 10000;
+                    color: white;
+                    font-family: system-ui, -apple-system, sans-serif;
+                `;
+                screen.innerHTML = `
+                    <h2 style="font-size: 32px; margin-bottom: 20px;">Game Over!</h2>
+                    <p style="font-size: 18px; margin-bottom: 30px;">Spikes Dodged: <span id="spikesDodgedCount">0</span></p>
+                    <button onclick="retrySpikeDodge()" style="
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                        border: none;
+                        padding: 15px 30px;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        margin: 10px;
+                    ">Try Again</button>
+                    <button onclick="exitSpikeDodge()" style="
+                        background: rgba(100, 100, 100, 0.5);
+                        color: white;
+                        border: none;
+                        padding: 15px 30px;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        margin: 10px;
+                    ">Go Back to Lobby</button>
+                `;
+                document.body.appendChild(screen);
+                document.getElementById('spikesDodgedCount').textContent = spikesDodged;
+            }
+        }
+        
+        function retrySpikeDodge() {
+            // Hide death screen
+            const deathScreen = document.getElementById('deathScreen');
+            if (deathScreen) {
+                deathScreen.style.display = 'none';
+            }
+            
+            // Reset game
+            playerDead = false;
+            deathParticles = [];
+            startSpikeDodge();
+        }
+        
+        function exitSpikeDodge() {
+            // Hide death screen
+            const deathScreen = document.getElementById('deathScreen');
+            if (deathScreen) {
+                deathScreen.style.display = 'none';
+            }
+            
+            // Exit game mode
+            currentGameMode = null;
+            spikes = [];
+            playerDead = false;
+            deathParticles = [];
+            spikesDodged = 0;
+            
+            // Reset player
+            if (localPlayer) {
+                localPlayer.visible = true;
+                localPlayer.x = canvas.width / 2;
+                localPlayer.y = canvas.height / 2;
+                localPlayer.vx = 0;
+                localPlayer.vy = 0;
+            }
+            
+            // Reset health
+            if (healthBar) {
+                healthBar.setHealth(100);
+            }
+            
+            // Go back to lobby
+            goBackToLobby();
+        }
+        
+        function goBackToLobby() {
+            // If in a hosted game, all players stay in the game
+            if (isHost || roomId) {
+                // Just close the menu and return to game
+                const menuWidget = document.getElementById('menuWidget');
+                if (menuWidget) {
+                    menuWidget.classList.remove('expanded');
+                    menuWidget.classList.add('collapsed');
+                    menuVisible = false;
+                }
+            } else {
+                // If alone, return to main menu
+                const menuWidget = document.getElementById('menuWidget');
+                if (menuWidget) {
+                    menuWidget.classList.remove('expanded');
+                    menuWidget.classList.add('collapsed');
+                    menuVisible = false;
+                }
+                showMainMenu();
+            }
+        }
+        
+        function checkMatchVictory() {
+            // Check if all players on one team are dead
+            let team1Alive = 0;
+            let team2Alive = 0;
+            let winnerName = null;
+            let winnerPlayer = null;
+            
+            players.forEach((player, playerId) => {
+                const team = playerTeams.get(playerId);
+                if (!player.dead && player.health > 0) {
+                    if (team === 1) {
+                        team1Alive++;
+                    } else if (team === 2) {
+                        team2Alive++;
+                    }
+                }
+            });
+            
+            // Determine winner
+            if (team1Alive === 0 && team2Alive > 0) {
+                // Team 2 wins - find first alive player from team 2
+                players.forEach((player, playerId) => {
+                    if (playerTeams.get(playerId) === 2 && !player.dead && player.health > 0 && !winnerPlayer) {
+                        winnerPlayer = player;
+                    }
+                });
+                if (winnerPlayer) {
+                    winnerName = winnerPlayer.name || 'Team 2 Player';
+                }
+            } else if (team2Alive === 0 && team1Alive > 0) {
+                // Team 1 wins - find first alive player from team 1
+                players.forEach((player, playerId) => {
+                    if (playerTeams.get(playerId) === 1 && !player.dead && player.health > 0 && !winnerPlayer) {
+                        winnerPlayer = player;
+                    }
+                });
+                if (winnerPlayer) {
+                    winnerName = winnerPlayer.name || 'Team 1 Player';
                 }
             }
             
-            if (colorPickerWidget) {
-                if (uiVisible) {
-                    colorPickerWidget.classList.remove('hidden');
-                } else {
-                    colorPickerWidget.classList.add('hidden');
+            if (winnerName) {
+                showVictoryScreen(winnerName);
+            }
+        }
+        
+        function showVictoryScreen(winnerName) {
+            // Create or show victory screen
+            const victoryScreen = document.getElementById('victoryScreen');
+            if (victoryScreen) {
+                victoryScreen.style.display = 'flex';
+                document.getElementById('winnerName').textContent = winnerName;
+            } else {
+                // Create victory screen if it doesn't exist
+                const screen = document.createElement('div');
+                screen.id = 'victoryScreen';
+                screen.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.9);
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 10001;
+                    color: white;
+                    font-family: system-ui, -apple-system, sans-serif;
+                `;
+                screen.innerHTML = `
+                    <h2 style="font-size: 48px; margin-bottom: 20px; color: #667eea; text-shadow: 0 0 20px rgba(102, 126, 234, 0.8);">Victory!</h2>
+                    <p style="font-size: 24px; margin-bottom: 40px;"><span id="winnerName">${winnerName}</span> Won!</p>
+                    <button onclick="goBackToLobbyFromVictory()" style="
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                        border: none;
+                        padding: 15px 30px;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        margin: 10px;
+                    ">Go Back to Lobby</button>
+                    <button onclick="searchNewGame()" style="
+                        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+                        color: white;
+                        border: none;
+                        padding: 15px 30px;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        margin: 10px;
+                    ">Search for a New Game</button>
+                `;
+                document.body.appendChild(screen);
+            }
+        }
+        
+        function goBackToLobbyFromVictory() {
+            // Hide victory screen
+            const victoryScreen = document.getElementById('victoryScreen');
+            if (victoryScreen) {
+                victoryScreen.style.display = 'none';
+            }
+            
+            // Reset match state
+            matchInProgress = false;
+            playerTeams.clear();
+            team1Players = [];
+            team2Players = [];
+            
+            // Reset all players
+            players.forEach((player, playerId) => {
+                player.health = 100;
+                player.visible = true;
+                player.dead = false;
+                if (healthBar && playerId === localPlayerId) {
+                    healthBar.setHealth(100);
                 }
+            });
+            
+            playerDead = false;
+            
+            // Go back to lobby
+            goBackToLobby();
+        }
+        
+        function searchNewGame() {
+            // Hide victory screen
+            const victoryScreen = document.getElementById('victoryScreen');
+            if (victoryScreen) {
+                victoryScreen.style.display = 'none';
+            }
+            
+            // Reset match state
+            matchInProgress = false;
+            playerTeams.clear();
+            team1Players = [];
+            team2Players = [];
+            
+            // Reset all players
+            players.forEach((player, playerId) => {
+                player.health = 100;
+                player.visible = true;
+                player.dead = false;
+                if (healthBar && playerId === localPlayerId) {
+                    healthBar.setHealth(100);
+                }
+            });
+            
+            playerDead = false;
+            
+            // Show VS menu to search again
+            showVSMenu();
+        }
+        
+        // Initialize teams when match starts (placeholder - would be set by matchmaking)
+        function initializeMatchTeams() {
+            if (queueMode === '1v1') {
+                // Assign teams for 1v1
+                let team = 1;
+                players.forEach((player, playerId) => {
+                    playerTeams.set(playerId, team);
+                    if (team === 1) {
+                        team1Players.push(playerId);
+                    } else {
+                        team2Players.push(playerId);
+                    }
+                    team = 2;
+                });
+            } else if (queueMode === '2v2') {
+                // Assign teams for 2v2
+                let team = 1;
+                players.forEach((player, playerId) => {
+                    playerTeams.set(playerId, team);
+                    if (team === 1) {
+                        team1Players.push(playerId);
+                    } else {
+                        team2Players.push(playerId);
+                    }
+                    // Alternate teams every 2 players
+                    if (team1Players.length === 2) {
+                        team = 2;
+                    }
+                });
+            }
+            matchInProgress = true;
+        }
+        
+        function showMultiplayerMenu() {
+            hideAllScreens();
+            // If already in a game, show the game screen instead
+            if (isHost || roomId) {
+                // Update room ID display
+                const roomIdDisplay = document.getElementById('roomIdDisplay');
+                if (roomIdDisplay && roomId) {
+                    roomIdDisplay.textContent = 'Room ID: ' + roomId;
+                }
+                document.getElementById('gameScreen').classList.add('active');
+                updatePlayerList();
+            } else {
+                document.getElementById('multiplayerMenuScreen').classList.add('active');
+            }
+        }
+        
+        function showJoinScreen() {
+            hideAllScreens();
+            document.getElementById('joinGameScreen').classList.add('active');
+        }
+        
+        function showControlsMenu() {
+            hideAllScreens();
+            document.getElementById('controlsScreen').classList.add('active');
+        }
+        
+        function showCustomizeMenu() {
+            hideAllScreens();
+            document.getElementById('customizeScreen').classList.add('active');
+            // Load saved name
+            const nameInput = document.getElementById('playerNameInput');
+            if (nameInput && localPlayer && localPlayer.name) {
+                nameInput.value = localPlayer.name;
+            }
+            // Update image preview
+            updateImagePreview();
+        }
+        
+        function updateImagePreview() {
+            const preview = document.getElementById('imagePreview');
+            const previewImg = document.getElementById('previewImg');
+            if (localPlayer && localPlayer.image) {
+                previewImg.src = localPlayer.image;
+                preview.style.display = 'block';
+            } else {
+                preview.style.display = 'none';
+            }
+        }
+        
+        function clearImage() {
+            if (localPlayer) {
+                localPlayer.image = null;
+                updateImagePreview();
+                // Save to localStorage
+                try {
+                    localStorage.removeItem('playerImage');
+                } catch (e) {
+                    console.warn('Could not remove image from localStorage:', e);
+                }
+            }
+        }
+        
+        function hideAllScreens() {
+            const screens = document.querySelectorAll('.menu-screen');
+            screens.forEach(screen => screen.classList.remove('active'));
+        }
+        
+        function resumeGame() {
+            toggleMenu();
+        }
+        
+        function quitGame() {
+            if (confirm('Are you sure you want to quit?')) {
+                // Leave game if in multiplayer
+                if (connections.size > 0 || isHost) {
+                    leaveGame();
+                }
+                // Could redirect or close window, for now just close menu
+                toggleMenu();
             }
         }
         
@@ -715,7 +1803,8 @@
                         rotation: localPlayer.rotation,
                         isDashing: localPlayer.isDashing,
                         dashCooldown: localPlayer.dashCooldown,
-                        color: localPlayer.color
+                        color: localPlayer.color,
+                        name: localPlayer.name
                     };
                     broadcastToAll(colorState);
                 }
@@ -745,13 +1834,14 @@
         }
         
         window.addEventListener('keydown', (e) => {
-            // Toggle UI with ESC or P
+            // Toggle menu with ESC or P
             if (e.key === 'Escape' || e.key.toLowerCase() === 'p') {
                 e.preventDefault();
-                toggleUI();
+                toggleMenu();
                 return;
             }
             
+            // Always process game input - menu doesn't block keyboard
             keys[e.key.toLowerCase()] = true;
             if (e.key === ' ' && localPlayer && localPlayer.dashCooldown <= 0) {
                 localPlayer.isDashing = true;
@@ -785,10 +1875,18 @@
             const minDistance = player1.baseRadius + player2.baseRadius;
             
             if (distance < minDistance && distance > 0) {
+                // Prevent multiple damage from same collision (cooldown of 0.5 seconds)
+                const now = Date.now();
+                const collisionCooldown = 500; // 500ms cooldown
+                
                 // Calculate overlap
                 const overlap = minDistance - distance;
                 const separationX = (dx / distance) * overlap * 0.5;
                 const separationY = (dy / distance) * overlap * 0.5;
+                
+                // Store velocities before collision to calculate recoil
+                const player1VelBefore = Math.sqrt(player1.vx * player1.vx + player1.vy * player1.vy);
+                const player2VelBefore = Math.sqrt(player2.vx * player2.vx + player2.vy * player2.vy);
                 
                 // Push players apart
                 player1.x -= separationX;
@@ -808,10 +1906,69 @@
                     const bounceStrength = 0.3; // How much velocity is transferred
                     const impulse = relativeSpeed * bounceStrength;
                     
+                    const player1VxBefore = player1.vx;
+                    const player1VyBefore = player1.vy;
+                    const player2VxBefore = player2.vx;
+                    const player2VyBefore = player2.vy;
+                    
                     player1.vx += impulse * normalX;
                     player1.vy += impulse * normalY;
                     player2.vx -= impulse * normalX;
                     player2.vy -= impulse * normalY;
+                    
+                    // Calculate recoil (change in velocity magnitude)
+                    const player1VelAfter = Math.sqrt(player1.vx * player1.vx + player1.vy * player1.vy);
+                    const player2VelAfter = Math.sqrt(player2.vx * player2.vx + player2.vy * player2.vy);
+                    
+                    const player1Recoil = Math.abs(player1VelAfter - player1VelBefore);
+                    const player2Recoil = Math.abs(player2VelAfter - player2VelBefore);
+                    
+                    // Apply damage to player with more recoil (only if cooldown has passed)
+                    if (now - player1.lastCollisionTime > collisionCooldown && 
+                        now - player2.lastCollisionTime > collisionCooldown) {
+                        
+                        if (player1Recoil > player2Recoil) {
+                            // Player 1 takes damage
+                            player1.health = Math.max(0, player1.health - 10);
+                            player1.lastCollisionTime = now;
+                            
+                            // Check for death
+                            if (player1.health <= 0 && !player1.dead) {
+                                player1.dead = true;
+                                player1.visible = false;
+                            }
+                            
+                            // Update health bar if it's the local player
+                            if (player1.id === localPlayerId && healthBar) {
+                                healthBar.setHealth(player1.health);
+                            }
+                            
+                            // Check for match victory
+                            if (matchInProgress && (queueMode === '1v1' || queueMode === '2v2')) {
+                                setTimeout(() => checkMatchVictory(), 500);
+                            }
+                        } else if (player2Recoil > player1Recoil) {
+                            // Player 2 takes damage
+                            player2.health = Math.max(0, player2.health - 10);
+                            player2.lastCollisionTime = now;
+                            
+                            // Check for death
+                            if (player2.health <= 0 && !player2.dead) {
+                                player2.dead = true;
+                                player2.visible = false;
+                            }
+                            
+                            // Update health bar if it's the local player
+                            if (player2.id === localPlayerId && healthBar) {
+                                healthBar.setHealth(player2.health);
+                            }
+                            
+                            // Check for match victory
+                            if (matchInProgress && (queueMode === '1v1' || queueMode === '2v2')) {
+                                setTimeout(() => checkMatchVictory(), 500);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -958,7 +2115,7 @@
             }
         }
         
-        function drawBubble(x, y, scaleX, scaleY, rotation, alpha = 1, color = null) {
+        function drawBubble(x, y, scaleX, scaleY, rotation, alpha = 1, color = null, image = null) {
             const radius = DEFAULT_BUBBLE_SIZE;
             
             ctx.save();
@@ -1063,6 +2220,30 @@
             ctx.shadowBlur = 0;
             ctx.shadowColor = 'transparent';
             
+            // Draw image inside bubble if provided
+            if (image) {
+                let imgObj = imageCache.get(image);
+                if (!imgObj && typeof image === 'string' && image.startsWith('data:')) {
+                    imgObj = new Image();
+                    imgObj.onload = () => {
+                        imageCache.set(image, imgObj);
+                    };
+                    imgObj.src = image;
+                    imageCache.set(image, imgObj);
+                }
+                
+                if (imgObj && imgObj.complete && imgObj.width > 0) {
+                    ctx.save();
+                    ctx.globalAlpha = alpha;
+                    const imgSize = radius * 0.6; // Image size is 60% of bubble radius
+                    ctx.beginPath();
+                    ctx.arc(0, 0, imgSize / 2, 0, Math.PI * 2);
+                    ctx.clip();
+                    ctx.drawImage(imgObj, -imgSize / 2, -imgSize / 2, imgSize, imgSize);
+                    ctx.restore();
+                }
+            }
+            
             ctx.restore();
         }
         
@@ -1077,17 +2258,27 @@
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
             
-            // Draw all players
+            // Draw game mode elements (spikes, etc.)
+            if (currentGameMode === 'spike_dodge') {
+                drawSpikes();
+            }
+            
+            // Draw death particles
+            if (deathParticles.length > 0) {
+                drawDeathParticles();
+            }
+            
+            // Draw all players (only if visible)
             players.forEach((player, peerId) => {
                 // Draw trail
                 if (DEFAULT_SHOW_TRAIL && player.trail) {
                     player.trail.forEach(t => {
-                        drawBubble(t.x, t.y, t.scaleX, t.scaleY, t.rotation, t.alpha * 0.5, player.color);
+                        drawBubble(t.x, t.y, t.scaleX, t.scaleY, t.rotation, t.alpha * 0.5, player.color, null);
                     });
                 }
                 
                 // Draw main bubble
-                drawBubble(player.x, player.y, player.scaleX, player.scaleY, player.rotation, 1, player.color);
+                drawBubble(player.x, player.y, player.scaleX, player.scaleY, player.rotation, 1, player.color, player.image);
                 
                 // Draw velocity vector (only for local player if enabled)
                 if (peerId === localPlayerId && DEFAULT_SHOW_VELOCITY && (player.vx !== 0 || player.vy !== 0)) {
@@ -1253,7 +2444,8 @@
                 lastSyncTime = now;
             }
             
-            // Medium priority sync (scale, rotation, color) - 30fps
+            // Medium priority sync (scale, rotation, color, name) - 30fps
+            // Note: image is sent separately when it changes, not every frame
             if (now - lastSyncTimeMedium >= SYNC_INTERVAL_MEDIUM) {
                 const state = {
                     type: 'state_medium',
@@ -1263,7 +2455,9 @@
                     rotation: localPlayer.rotation,
                     isDashing: localPlayer.isDashing,
                     dashCooldown: localPlayer.dashCooldown,
-                    color: localPlayer.color // Sync color to other players
+                    color: localPlayer.color, // Sync color to other players
+                    name: localPlayer.name // Sync name
+                    // image is NOT included here - sent separately via 'image_update' message
                 };
                 
                 broadcastToAll(state);
@@ -1283,11 +2477,19 @@
         function gameLoop(timestamp) {
             // Use timestamp from requestAnimationFrame, or calculate delta
             const time = timestamp || (lastTime += 16);
+            const deltaTime = time - (lastTime || time);
             lastTime = time;
             
+            // Always update game - never pause
             updatePlayer();
             updateRemotePlayers();
             syncGameState();
+            
+            // Update game modes
+            if (currentGameMode === 'spike_dodge') {
+                updateSpikeDodge(deltaTime);
+            }
+            
             draw(time);
             requestAnimationFrame(gameLoop);
         }
@@ -1306,9 +2508,18 @@
         
         // Multiplayer functions
         function hostGame() {
+            // Exit any game mode when hosting
+            if (currentGameMode) {
+                currentGameMode = null;
+                spikes = [];
+            }
+            
             roomId = Math.random().toString(36).substring(2, 9);
             localPlayerId = roomId;
             isHost = true;
+            
+            // Update challenges button visibility
+            updateChallengesButtonVisibility();
             
             peer = new Peer(roomId, {
                 host: '0.peerjs.com',
@@ -1335,9 +2546,8 @@
                 players.set(id, localPlayer);
                 
                 document.getElementById('roomIdDisplay').textContent = 'Room ID: ' + id;
-                document.getElementById('menuScreen').style.display = 'none';
-                document.getElementById('gameScreen').style.display = 'block';
-                document.getElementById('multiplayerUI').classList.remove('hidden');
+                hideAllScreens();
+                document.getElementById('gameScreen').classList.add('active');
                 updatePlayerList();
             });
             
@@ -1351,16 +2561,6 @@
             });
         }
         
-        function showJoinScreen() {
-            document.getElementById('menuScreen').style.display = 'none';
-            document.getElementById('joinScreen').style.display = 'block';
-        }
-        
-        function showMenuScreen() {
-            document.getElementById('joinScreen').style.display = 'none';
-            document.getElementById('menuScreen').style.display = 'block';
-        }
-        
         function joinGame() {
             const inputRoomId = document.getElementById('roomIdInput').value.trim();
             if (!inputRoomId) {
@@ -1368,8 +2568,22 @@
                 return;
             }
             
+            // Save current player position BEFORE attempting connection
+            let savedX = null;
+            let savedY = null;
+            if (localPlayer) {
+                savedX = localPlayer.x;
+                savedY = localPlayer.y;
+            }
+            
             roomId = inputRoomId;
             isHost = false;
+            
+            // Update challenges button visibility
+            updateChallengesButtonVisibility();
+            
+            // Flag to track if connection failed
+            let connectionFailed = false;
             
             peer = new Peer({
                 host: '0.peerjs.com',
@@ -1381,85 +2595,250 @@
             peer.on('open', (id) => {
                 console.log('Client peer opened with ID:', id);
                 
-                // Remove old local player if it exists
-                if (players.has('local')) {
-                    players.delete('local');
+                // Don't proceed if connection already failed
+                if (connectionFailed) {
+                    return;
                 }
                 
-                localPlayerId = id;
-                localPlayer = createPlayer(id, true);
-                // Apply color from color picker
-                const colorPicker = document.getElementById('colorPicker');
-                if (colorPicker && localPlayer) {
-                    localPlayer.color = hexToHsl(colorPicker.value);
+                // Store the current player position before creating new player
+                let savedX = null;
+                let savedY = null;
+                if (localPlayer) {
+                    savedX = localPlayer.x;
+                    savedY = localPlayer.y;
                 }
-                players.set(id, localPlayer);
                 
-                // Connect to host
+                // Connect to host - don't create player or show game screen yet, wait for connection
                 const conn = peer.connect(roomId);
-                setupConnection(conn);
                 
-                document.getElementById('roomIdDisplay').textContent = 'Room ID: ' + roomId;
-                document.getElementById('joinScreen').style.display = 'none';
-                document.getElementById('gameScreen').style.display = 'block';
-                document.getElementById('multiplayerUI').classList.remove('hidden');
+                // Set up connection with error handling
+                conn.on('open', () => {
+                    // Don't proceed if connection already failed
+                    if (connectionFailed) {
+                        return;
+                    }
+                    
+                    // Connection successful - NOW create player and set up multiplayer
+                    // Remove old local player if it exists
+                    if (players.has('local')) {
+                        players.delete('local');
+                    }
+                    
+                    localPlayerId = id;
+                    localPlayer = createPlayer(id, true);
+                    
+                    // Restore position if we had one
+                    if (savedX !== null && savedY !== null) {
+                        localPlayer.x = savedX;
+                        localPlayer.y = savedY;
+                    }
+                    
+                    // Apply color from color picker
+                    const colorPicker = document.getElementById('colorPicker');
+                    if (colorPicker && localPlayer) {
+                        localPlayer.color = hexToHsl(colorPicker.value);
+                    }
+                    players.set(id, localPlayer);
+                    
+                    // Now show game screen
+                    setupConnection(conn);
+                    document.getElementById('roomIdDisplay').textContent = 'Room ID: ' + roomId;
+                    hideAllScreens();
+                    document.getElementById('gameScreen').classList.add('active');
+                    updatePlayerList();
+                });
+                
+                conn.on('error', (err) => {
+                    console.error('Connection error:', err);
+                    connectionFailed = true;
+                    
+                    // Close the connection
+                    if (conn && !conn.destroyed) {
+                        conn.close();
+                    }
+                    
+                    // Clean up on connection error
+                    if (peer) {
+                        peer.destroy();
+                        peer = null;
+                    }
+                    roomId = null;
+                    isHost = false;
+                    
+                    // Don't reset player - restore original local player with saved position
+                    // Just clear multiplayer state
+                    if (localPlayerId && localPlayerId !== 'local') {
+                        players.delete(localPlayerId);
+                    }
+                    connections.clear();
+                    
+                    // Restore to single player mode - use saved position from before connection attempt
+                    localPlayerId = 'local';
+                    localPlayer = createPlayer('local', true);
+                    
+                    // Restore position
+                    if (savedX !== null && savedY !== null) {
+                        localPlayer.x = savedX;
+                        localPlayer.y = savedY;
+                    }
+                    
+                    const colorPicker = document.getElementById('colorPicker');
+                    if (colorPicker && localPlayer) {
+                        localPlayer.color = hexToHsl(colorPicker.value);
+                    }
+                    players.set('local', localPlayer);
+                    
+                    // Show error and return to join screen
+                    alert('Room ID not found. Please check the room ID and try again.');
+                    showJoinScreen();
+                });
+                
+                // Also handle connection close (room might have closed)
+                conn.on('close', () => {
+                    console.log('Connection closed - room may not exist');
+                    
+                    // Only show error if we haven't successfully connected
+                    if (!connections.has(conn.peer) && !connectionFailed) {
+                        connectionFailed = true;
+                        
+                        // Clean up on connection close
+                        if (peer) {
+                            peer.destroy();
+                            peer = null;
+                        }
+                        roomId = null;
+                        isHost = false;
+                        
+                        // Don't reset player - restore original local player with saved position
+                        // Just clear multiplayer state
+                        if (localPlayerId && localPlayerId !== 'local') {
+                            players.delete(localPlayerId);
+                        }
+                        connections.clear();
+                        
+                        // Restore to single player mode - use saved position from before connection attempt
+                        localPlayerId = 'local';
+                        localPlayer = createPlayer('local', true);
+                        
+                        // Restore position
+                        if (savedX !== null && savedY !== null) {
+                            localPlayer.x = savedX;
+                            localPlayer.y = savedY;
+                        }
+                        
+                        const colorPicker = document.getElementById('colorPicker');
+                        if (colorPicker && localPlayer) {
+                            localPlayer.color = hexToHsl(colorPicker.value);
+                        }
+                        players.set('local', localPlayer);
+                        
+                        alert('Room ID not found. Please check the room ID and try again.');
+                        showJoinScreen();
+                    }
+                });
             });
             
             peer.on('error', (err) => {
                 console.error('Peer error:', err);
-                if (err.type === 'peer-unavailable') {
-                    alert('Room not found. Please check the room ID.');
+                connectionFailed = true;
+                
+                // Clean up on peer error
+                if (peer) {
+                    peer.destroy();
+                    peer = null;
                 }
+                roomId = null;
+                isHost = false;
+                
+                // Don't reset player - restore original local player with saved position
+                // Just clear multiplayer state
+                if (localPlayerId && localPlayerId !== 'local') {
+                    players.delete(localPlayerId);
+                }
+                connections.clear();
+                
+                // Restore to single player mode - use saved position from before connection attempt
+                localPlayerId = 'local';
+                localPlayer = createPlayer('local', true);
+                
+                // Restore position
+                if (savedX !== null && savedY !== null) {
+                    localPlayer.x = savedX;
+                    localPlayer.y = savedY;
+                }
+                
+                const colorPicker = document.getElementById('colorPicker');
+                if (colorPicker && localPlayer) {
+                    localPlayer.color = hexToHsl(colorPicker.value);
+                }
+                players.set('local', localPlayer);
+                
+                // Show error message
+                if (err.type === 'peer-unavailable') {
+                    alert('Room ID not found. Please check the room ID and try again.');
+                } else {
+                    alert('Failed to connect. Please try again.');
+                }
+                showJoinScreen();
             });
         }
         
         function setupConnection(conn) {
-            conn.on('open', () => {
-                console.log('Connection opened with:', conn.peer);
-                connections.set(conn.peer, conn);
+            // Connection is already open when this is called from joinGame
+            console.log('Setting up connection with:', conn.peer);
+            connections.set(conn.peer, conn);
+            
+            // Send initial state to new connection
+            if (localPlayer) {
+                conn.send({
+                    type: 'state',
+                    id: localPlayerId,
+                    x: localPlayer.x,
+                    y: localPlayer.y,
+                    vx: localPlayer.vx,
+                    vy: localPlayer.vy
+                });
+                conn.send({
+                    type: 'state_medium',
+                    id: localPlayerId,
+                    scaleX: localPlayer.scaleX,
+                    scaleY: localPlayer.scaleY,
+                    rotation: localPlayer.rotation,
+                    isDashing: localPlayer.isDashing,
+                    dashCooldown: localPlayer.dashCooldown,
+                    color: localPlayer.color, // Send color to new connection
+                    name: localPlayer.name // Send name to new connection
+                });
                 
-                // Send initial state to new connection
-                if (localPlayer) {
+                // Send image separately if it exists (to avoid large messages)
+                if (localPlayer.image) {
                     conn.send({
-                        type: 'state',
+                        type: 'image_update',
                         id: localPlayerId,
-                        x: localPlayer.x,
-                        y: localPlayer.y,
-                        vx: localPlayer.vx,
-                        vy: localPlayer.vy
-                    });
-                    conn.send({
-                        type: 'state_medium',
-                        id: localPlayerId,
-                        scaleX: localPlayer.scaleX,
-                        scaleY: localPlayer.scaleY,
-                        rotation: localPlayer.rotation,
-                        isDashing: localPlayer.isDashing,
-                        dashCooldown: localPlayer.dashCooldown,
-                        color: localPlayer.color // Send color to new connection
+                        image: localPlayer.image
                     });
                 }
-                
-                // If we're the host, also connect this new player to existing players
-                if (isHost) {
-                    connections.forEach((existingConn, peerId) => {
-                        if (peerId !== conn.peer && existingConn.open) {
-                            // Tell existing player about new player
-                            existingConn.send({
-                                type: 'new_player',
-                                id: conn.peer
-                            });
-                            // Tell new player about existing player
-                            conn.send({
-                                type: 'new_player',
-                                id: peerId
-                            });
-                        }
-                    });
-                }
-                
-                updatePlayerList();
-            });
+            }
+            
+            // If we're the host, also connect this new player to existing players
+            if (isHost) {
+                connections.forEach((existingConn, peerId) => {
+                    if (peerId !== conn.peer && existingConn.open) {
+                        // Tell existing player about new player
+                        existingConn.send({
+                            type: 'new_player',
+                            id: conn.peer
+                        });
+                        // Tell new player about existing player
+                        conn.send({
+                            type: 'new_player',
+                            id: peerId
+                        });
+                    }
+                });
+            }
+            
+            updatePlayerList();
             
             conn.on('data', (data) => {
                 handleNetworkData(data, conn.peer);
@@ -1510,6 +2889,19 @@
                 if (data.color) {
                     player.color = data.color;
                 }
+                // Update name if provided
+                if (data.name !== undefined) {
+                    player.name = data.name;
+                }
+            } else if (data.type === 'image_update') {
+                // Separate message type for image updates (to handle large data)
+                if (!player) {
+                    player = createPlayer(data.id, false);
+                    players.set(data.id, player);
+                }
+                if (data.image !== undefined) {
+                    player.image = data.image;
+                }
             } else if (data.type === 'new_player') {
                 // Another player joined - if we're not host, we might want to connect to them too
                 // For now, just acknowledge
@@ -1521,14 +2913,15 @@
             const playerListEl = document.getElementById('playerList');
             if (!playerListEl) return;
             
-            playerListEl.innerHTML = '<strong>Players (' + players.size + '):</strong><br>';
+                playerListEl.innerHTML = '<strong>Players (' + players.size + '):</strong><br>';
             players.forEach((player, peerId) => {
                 const isLocal = peerId === localPlayerId;
                 const statusClass = isLocal ? 'connected' : '';
+                const displayName = player.name || `Player ${peerId.substring(0, 6)}`;
                 playerListEl.innerHTML += `
                     <div class="player-list-item">
                         <span class="connection-status ${statusClass}"></span>
-                        Player ${peerId.substring(0, 6)}${isLocal ? ' (You)' : ''}
+                        ${displayName}${isLocal ? ' (You)' : ''}
                     </div>
                 `;
             });
@@ -1554,11 +2947,14 @@
             isHost = false;
             roomId = null;
             
-            // Reset UI
-            document.getElementById('multiplayerUI').classList.remove('hidden');
-            document.getElementById('gameScreen').style.display = 'none';
-            document.getElementById('menuScreen').style.display = 'block';
-            document.getElementById('joinScreen').style.display = 'none';
+            // Exit any game mode when leaving
+            if (currentGameMode) {
+                currentGameMode = null;
+                spikes = [];
+            }
+            
+            // Update challenges button visibility
+            updateChallengesButtonVisibility();
             
             // Recreate local player for single player
             localPlayerId = 'local';
@@ -1569,6 +2965,10 @@
                 localPlayer.color = hexToHsl(colorPicker.value);
             }
             players.set('local', localPlayer);
+            
+            // Show main menu
+            showMainMenu();
+            updatePlayerList();
         }
         
         // Circular Health Bar Class
@@ -1724,6 +3124,20 @@
                     this.draw();
                     this.updateText();
                 }
+                
+                // Check for death
+                if (this.currentHealth <= 0 && !playerDead) {
+                    playerDead = true;
+                    if (localPlayer) {
+                        localPlayer.dead = true;
+                    }
+                    triggerDeathEffect();
+                    
+                    // Check for match victory in VS modes
+                    if (matchInProgress && (queueMode === '1v1' || queueMode === '2v2')) {
+                        setTimeout(() => checkMatchVictory(), 500);
+                    }
+                }
             }
             
             takeDamage(amount) {
@@ -1775,6 +3189,123 @@
             // Update color when picker changes
             colorPicker.addEventListener('input', (e) => {
                 updatePlayerColor(e.target.value);
+            });
+        }
+        
+        // Setup name input
+        const nameInput = document.getElementById('playerNameInput');
+        if (nameInput) {
+            nameInput.addEventListener('input', (e) => {
+                if (localPlayer) {
+                    localPlayer.name = e.target.value.trim() || null;
+                    // Save to localStorage
+                    try {
+                        if (localPlayer.name) {
+                            localStorage.setItem('playerName', localPlayer.name);
+                        } else {
+                            localStorage.removeItem('playerName');
+                        }
+                    } catch (err) {
+                        console.warn('Could not save name to localStorage:', err);
+                    }
+                    // Update in players map
+                    if (localPlayerId) {
+                        players.set(localPlayerId, localPlayer);
+                    }
+                    // Broadcast name change immediately
+                    if (connections.size > 0) {
+                        const nameState = {
+                            type: 'state_medium',
+                            id: localPlayerId,
+                            scaleX: localPlayer.scaleX,
+                            scaleY: localPlayer.scaleY,
+                            rotation: localPlayer.rotation,
+                            isDashing: localPlayer.isDashing,
+                            dashCooldown: localPlayer.dashCooldown,
+                            color: localPlayer.color,
+                            name: localPlayer.name
+                        };
+                        broadcastToAll(nameState);
+                    }
+                }
+            });
+        }
+        
+        // Setup image upload
+        const imageInput = document.getElementById('actorImageInput');
+        if (imageInput) {
+            imageInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    // Resize and compress image before sending
+                    const maxSize = 200; // Max width/height in pixels
+                    const maxFileSize = 50000; // Max file size in bytes (50KB)
+                    
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            // Create canvas to resize image
+                            const canvas = document.createElement('canvas');
+                            let width = img.width;
+                            let height = img.height;
+                            
+                            // Resize if too large
+                            if (width > maxSize || height > maxSize) {
+                                if (width > height) {
+                                    height = (height / width) * maxSize;
+                                    width = maxSize;
+                                } else {
+                                    width = (width / height) * maxSize;
+                                    height = maxSize;
+                                }
+                            }
+                            
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, width, height);
+                            
+                            // Convert to data URL with compression
+                            let imageData = canvas.toDataURL('image/jpeg', 0.7); // 70% quality
+                            
+                            // If still too large, reduce quality further
+                            if (imageData.length > maxFileSize) {
+                                imageData = canvas.toDataURL('image/jpeg', 0.5); // 50% quality
+                            }
+                            
+                            if (imageData.length > maxFileSize) {
+                                imageData = canvas.toDataURL('image/jpeg', 0.3); // 30% quality
+                            }
+                            
+                            if (localPlayer) {
+                                localPlayer.image = imageData;
+                                // Save to localStorage
+                                try {
+                                    localStorage.setItem('playerImage', imageData);
+                                } catch (err) {
+                                    console.warn('Could not save image to localStorage:', err);
+                                }
+                                // Update in players map
+                                if (localPlayerId) {
+                                    players.set(localPlayerId, localPlayer);
+                                }
+                                updateImagePreview();
+                                // Broadcast image change immediately using separate message type
+                                if (connections.size > 0) {
+                                    const imageState = {
+                                        type: 'image_update',
+                                        id: localPlayerId,
+                                        image: localPlayer.image
+                                    };
+                                    broadcastToAll(imageState);
+                                }
+                            }
+                        };
+                        img.src = event.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
             });
         }
         
