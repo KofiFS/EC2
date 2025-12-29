@@ -325,8 +325,7 @@
         }
         
         .menu-widget.collapsed {
-            width: auto;
-            min-width: 120px;
+            width: 280px;
         }
         
         .menu-widget.expanded {
@@ -521,9 +520,10 @@
                 <button class="menu-button" onclick="showVSMenu()">VS</button>
                 <button class="menu-button" onclick="showMultiplayerMenu()">Multiplayer</button>
                 <button class="menu-button" id="challengesButton" onclick="showChallengesMenu()" style="display: none;">Challenges</button>
+                <button class="menu-button" onclick="showStatsMenu()">Stats</button>
                 <button class="menu-button" onclick="showControlsMenu()">Controls</button>
                 <button class="menu-button" onclick="showCustomizeMenu()">Customize</button>
-                <button class="menu-button" onclick="quitGame()">Quit</button>
+                <button class="menu-button" onclick="goToShangkoStudio()">HomePage</button>
             </div>
             
             <!-- Multiplayer Menu Screen -->
@@ -557,7 +557,7 @@
                 <div class="controls-info">
                     <div><strong>Movement:</strong></div>
                     <div><span class="key">W A S D</span> or <span class="key">Arrow Keys</span> - Move</div>
-                    <div><span class="key">Space</span> - Dash</div>
+                    <div><span class="key">Space</span> or <span class="key">Double Click</span> - Dash</div>
                     <div><span class="key">Click</span> - Move to mouse</div>
                     <div style="margin-top: 10px;"><strong>Menu:</strong></div>
                     <div><span class="key">ESC</span> or <span class="key">P</span> - Toggle Menu</div>
@@ -593,10 +593,24 @@
             <div class="menu-screen" id="vsMenuScreen">
                 <h3>VS Matchmaking</h3>
                 <div id="queueStatus" style="color: #aaa; font-size: 12px; margin-bottom: 10px; text-align: center;">Not in queue</div>
+                <div id="rankingInfo" style="background: rgba(102, 126, 234, 0.1); padding: 10px; border-radius: 6px; margin-bottom: 10px; font-size: 11px; text-align: center;">
+                    <div id="rankTierDisplay" style="font-weight: 600; margin-bottom: 3px;"></div>
+                    <div id="rankRatingDisplay" style="color: #aaa;"></div>
+                </div>
                 <button class="menu-button" id="queue1v1Button" onclick="joinQueue('1v1')">1v1</button>
                 <button class="menu-button" id="queue2v2Button" onclick="joinQueue('2v2')">2v2</button>
                 <button class="menu-button" id="cancelQueueButton" onclick="cancelQueue()" style="display: none;">Cancel Queue</button>
+                <button class="menu-button" onclick="showStatsMenu()">Stats</button>
                 <button class="menu-button" onclick="showMainMenu()">Back</button>
+            </div>
+            
+            <!-- Stats Menu Screen -->
+            <div class="menu-screen" id="statsMenuScreen">
+                <h3>Player Stats</h3>
+                <div id="statsDisplay" style="background: rgba(10, 10, 20, 0.5); padding: 15px; border-radius: 6px; margin-bottom: 10px; font-size: 12px; max-height: 400px; overflow-y: auto;">
+                    <!-- Stats will be populated by JavaScript -->
+                </div>
+                <button class="menu-button" onclick="showMainMenu()">Back to Menu</button>
             </div>
             
             <!-- Challenges Menu Screen -->
@@ -605,7 +619,8 @@
                 <button class="menu-button" onclick="startSpikeDodge()">Spike Dodge</button>
                 <div style="color: #aaa; font-size: 11px; margin-top: 10px; text-align: center;">
                     Dodge falling spikes!<br>
-                    They get faster and more numerous over time.
+                    They get faster and more numerous over time.<br><br>
+                    <span style="color: #ffd700;">Best Score: <span id="spikeDodgeBestScoreDisplay">0</span></span>
                 </div>
                 <button class="menu-button" onclick="showMainMenu()">Back</button>
             </div>
@@ -681,6 +696,105 @@
         let playerTeams = new Map(); // playerId -> team (1 or 2)
         let team1Players = [];
         let team2Players = [];
+        
+        // Ranking system
+        let playerRanking = {
+            rating: 1000, // Starting ELO rating
+            wins: 0,
+            losses: 0,
+            draws: 0,
+            winStreak: 0,
+            bestWinStreak: 0,
+            totalMatches: 0,
+            // Spike Dodge Challenge stats
+            spikeDodge: {
+                bestScore: 0,
+                totalPlayed: 0,
+                totalSpikesDodged: 0,
+                averageScore: 0
+            }
+        };
+        
+        // Load ranking from localStorage
+        function loadRanking() {
+            try {
+                const saved = localStorage.getItem('playerRanking');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    playerRanking = { ...playerRanking, ...parsed };
+                }
+            } catch (e) {
+                console.warn('Could not load ranking from localStorage:', e);
+            }
+        }
+        
+        // Save ranking to localStorage
+        function saveRanking() {
+            try {
+                localStorage.setItem('playerRanking', JSON.stringify(playerRanking));
+            } catch (e) {
+                console.warn('Could not save ranking to localStorage:', e);
+            }
+        }
+        
+        // Calculate ELO rating change
+        function calculateELOChange(myRating, opponentRating, result) {
+            // result: 1 = win, 0.5 = draw, 0 = loss
+            const K = 32; // K-factor (how much rating changes per game)
+            const expectedScore = 1 / (1 + Math.pow(10, (opponentRating - myRating) / 400));
+            const ratingChange = Math.round(K * (result - expectedScore));
+            return ratingChange;
+        }
+        
+        // Update ranking after match result
+        function updateRanking(result, opponentRating = null) {
+            // result: 'win', 'loss', 'draw'
+            if (result === 'win') {
+                playerRanking.wins++;
+                playerRanking.winStreak++;
+                if (playerRanking.winStreak > playerRanking.bestWinStreak) {
+                    playerRanking.bestWinStreak = playerRanking.winStreak;
+                }
+                // Estimate opponent rating if not provided (average of all players)
+                const estimatedOpponentRating = opponentRating || playerRanking.rating;
+                const ratingChange = calculateELOChange(playerRanking.rating, estimatedOpponentRating, 1);
+                playerRanking.rating += ratingChange;
+            } else if (result === 'loss') {
+                playerRanking.losses++;
+                playerRanking.winStreak = 0;
+                const estimatedOpponentRating = opponentRating || playerRanking.rating;
+                const ratingChange = calculateELOChange(playerRanking.rating, estimatedOpponentRating, 0);
+                playerRanking.rating += ratingChange;
+            } else if (result === 'draw') {
+                playerRanking.draws++;
+                playerRanking.winStreak = 0;
+                const estimatedOpponentRating = opponentRating || playerRanking.rating;
+                const ratingChange = calculateELOChange(playerRanking.rating, estimatedOpponentRating, 0.5);
+                playerRanking.rating += ratingChange;
+            }
+            
+            playerRanking.totalMatches++;
+            playerRanking.rating = Math.max(0, Math.round(playerRanking.rating)); // Ensure rating doesn't go negative
+            saveRanking();
+            return playerRanking;
+        }
+        
+        // Get rank tier based on rating
+        function getRankTier(rating) {
+            if (rating >= 2000) return { name: 'Grandmaster', color: '#ff00ff' };
+            if (rating >= 1800) return { name: 'Master', color: '#ff6600' };
+            if (rating >= 1600) return { name: 'Diamond', color: '#00ccff' };
+            if (rating >= 1400) return { name: 'Platinum', color: '#00ffcc' };
+            if (rating >= 1200) return { name: 'Gold', color: '#ffd700' };
+            if (rating >= 1000) return { name: 'Silver', color: '#c0c0c0' };
+            return { name: 'Bronze', color: '#cd7f32' };
+        }
+        
+        // Load ranking on startup
+        loadRanking();
+        let matchmakingRoomId = null;
+        let isMatchmakingHost = false;
+        let matchmakingCheckInterval = null;
         
         // Challenges/Game modes state
         let currentGameMode = null; // 'spike_dodge' or null
@@ -1021,6 +1135,8 @@
         let mouseX = 0;
         let mouseY = 0;
         let mouseDown = false;
+        let lastClickTime = 0;
+        const DOUBLE_CLICK_DELAY = 300; // milliseconds
         
         // UI visibility state
         let uiVisible = true;
@@ -1058,11 +1174,146 @@
             hideAllScreens();
             document.getElementById('vsMenuScreen').classList.add('active');
             updateQueueStatus();
+            updateRankingDisplay();
+        }
+        
+        function showStatsMenu() {
+            hideAllScreens();
+            document.getElementById('statsMenuScreen').classList.add('active');
+            updateStatsDisplay();
+        }
+        
+        function updateRankingDisplay() {
+            const tier = getRankTier(playerRanking.rating);
+            const rankTierDisplay = document.getElementById('rankTierDisplay');
+            const rankRatingDisplay = document.getElementById('rankRatingDisplay');
+            
+            if (rankTierDisplay) {
+                rankTierDisplay.textContent = tier.name;
+                rankTierDisplay.style.color = tier.color;
+            }
+            if (rankRatingDisplay) {
+                rankRatingDisplay.textContent = `Rating: ${playerRanking.rating} | W: ${playerRanking.wins} L: ${playerRanking.losses}`;
+            }
+        }
+        
+        function updateStatsDisplay() {
+            const statsDisplay = document.getElementById('statsDisplay');
+            if (!statsDisplay) return;
+            
+            const tier = getRankTier(playerRanking.rating);
+            const winRate = playerRanking.totalMatches > 0 
+                ? ((playerRanking.wins / playerRanking.totalMatches) * 100).toFixed(1) 
+                : '0.0';
+            
+            const avgSpikeScore = playerRanking.spikeDodge.totalPlayed > 0
+                ? Math.round(playerRanking.spikeDodge.totalSpikesDodged / playerRanking.spikeDodge.totalPlayed)
+                : 0;
+            
+            // Get other players' stats for comparison
+            let otherPlayersStats = [];
+            players.forEach((player, playerId) => {
+                if (playerId !== localPlayerId && player.name) {
+                    // Try to get their stats from localStorage (if we've stored them)
+                    // For now, we'll just show their name and rating if available
+                    otherPlayersStats.push({
+                        name: player.name || `Player ${playerId.substring(0, 6)}`,
+                        id: playerId
+                    });
+                }
+            });
+            
+            statsDisplay.innerHTML = `
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 18px; font-weight: 600; color: ${tier.color}; margin-bottom: 8px; text-align: center;">${tier.name}</div>
+                    <div style="font-size: 14px; color: #aaa; text-align: center;">Rating: <span style="color: #fff; font-weight: 600;">${playerRanking.rating}</span></div>
+                </div>
+                
+                <div style="background: rgba(102, 126, 234, 0.1); padding: 12px; border-radius: 6px; margin-bottom: 15px; border: 1px solid rgba(102, 126, 234, 0.3);">
+                    <div style="font-size: 14px; font-weight: 600; color: #667eea; margin-bottom: 10px;">VS Match Stats</div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="color: #aaa; font-size: 11px;">Total Matches:</span>
+                        <span style="color: #fff; font-weight: 600; font-size: 11px;">${playerRanking.totalMatches}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="color: #aaa; font-size: 11px;">Wins:</span>
+                        <span style="color: #00ff88; font-weight: 600; font-size: 11px;">${playerRanking.wins}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="color: #aaa; font-size: 11px;">Losses:</span>
+                        <span style="color: #ff4444; font-weight: 600; font-size: 11px;">${playerRanking.losses}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="color: #aaa; font-size: 11px;">Draws:</span>
+                        <span style="color: #ffaa00; font-weight: 600; font-size: 11px;">${playerRanking.draws}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="color: #aaa; font-size: 11px;">Win Rate:</span>
+                        <span style="color: #fff; font-weight: 600; font-size: 11px;">${winRate}%</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="color: #aaa; font-size: 11px;">Current Streak:</span>
+                        <span style="color: ${playerRanking.winStreak > 0 ? '#ffd700' : '#fff'}; font-weight: 600; font-size: 11px;">
+                            ${playerRanking.winStreak > 0 ? '🔥 ' : ''}${playerRanking.winStreak}
+                        </span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #aaa; font-size: 11px;">Best Streak:</span>
+                        <span style="color: #ffd700; font-weight: 600; font-size: 11px;">🔥 ${playerRanking.bestWinStreak}</span>
+                    </div>
+                </div>
+                
+                <div style="background: rgba(255, 165, 0, 0.1); padding: 12px; border-radius: 6px; margin-bottom: 15px; border: 1px solid rgba(255, 165, 0, 0.3);">
+                    <div style="font-size: 14px; font-weight: 600; color: #ffaa00; margin-bottom: 10px;">Spike Dodge Challenge</div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="color: #aaa; font-size: 11px;">Best Score:</span>
+                        <span style="color: #ffd700; font-weight: 600; font-size: 11px;">${playerRanking.spikeDodge.bestScore}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="color: #aaa; font-size: 11px;">Times Played:</span>
+                        <span style="color: #fff; font-weight: 600; font-size: 11px;">${playerRanking.spikeDodge.totalPlayed}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="color: #aaa; font-size: 11px;">Total Spikes Dodged:</span>
+                        <span style="color: #fff; font-weight: 600; font-size: 11px;">${playerRanking.spikeDodge.totalSpikesDodged}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #aaa; font-size: 11px;">Average Score:</span>
+                        <span style="color: #fff; font-weight: 600; font-size: 11px;">${avgSpikeScore}</span>
+                    </div>
+                </div>
+                
+                ${otherPlayersStats.length > 0 ? `
+                    <div style="background: rgba(100, 200, 255, 0.1); padding: 12px; border-radius: 6px; border: 1px solid rgba(100, 200, 255, 0.3);">
+                        <div style="font-size: 14px; font-weight: 600; color: #64c8ff; margin-bottom: 10px;">Other Players in Game</div>
+                        ${otherPlayersStats.map(p => `
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 11px;">
+                                <span style="color: #aaa;">${p.name}:</span>
+                                <span style="color: #fff;">Connected</span>
+                            </div>
+                        `).join('')}
+                        <div style="color: #888; font-size: 10px; margin-top: 8px; font-style: italic;">
+                            Note: Rankings are stored locally. Each player has their own ranking.
+                        </div>
+                    </div>
+                ` : `
+                    <div style="background: rgba(100, 100, 100, 0.1); padding: 12px; border-radius: 6px; border: 1px solid rgba(100, 100, 100, 0.3);">
+                        <div style="font-size: 12px; color: #888; text-align: center; font-style: italic;">
+                            No other players connected. Rankings are stored locally on each device.
+                        </div>
+                    </div>
+                `}
+            `;
         }
         
         function showChallengesMenu() {
             hideAllScreens();
             document.getElementById('challengesMenuScreen').classList.add('active');
+            // Update best score display
+            const bestScoreEl = document.getElementById('spikeDodgeBestScoreDisplay');
+            if (bestScoreEl) {
+                bestScoreEl.textContent = playerRanking.spikeDodge.bestScore;
+            }
         }
         
         function updateChallengesButtonVisibility() {
@@ -1084,27 +1335,13 @@
             inQueue = true;
             updateQueueStatus();
             
-            // Initialize matchmaking peer
-            matchmakingPeer = new Peer({
-                secure: true
-            });
+            // Create a matchmaking room ID based on the queue mode
+            // This allows players in the same queue to find each other
+            matchmakingRoomId = `matchmaking-${mode}-${Date.now()}`;
             
-            matchmakingPeer.on('open', (id) => {
-                console.log('Matchmaking peer opened:', id);
-                // Broadcast queue request
-                broadcastQueueRequest();
-            });
-            
-            matchmakingPeer.on('connection', (conn) => {
-                conn.on('open', () => {
-                    matchmakingConnections.set(conn.peer, conn);
-                    handleMatchmakingData(conn);
-                });
-            });
-            
-            matchmakingPeer.on('error', (err) => {
-                console.error('Matchmaking peer error:', err);
-            });
+            // Try to connect to an existing matchmaking room first
+            // If no room exists, become the host
+            attemptMatchmakingConnection(mode);
             
             // Update UI
             document.getElementById('queue1v1Button').style.display = 'none';
@@ -1112,9 +1349,220 @@
             document.getElementById('cancelQueueButton').style.display = 'block';
         }
         
+        function attemptMatchmakingConnection(mode) {
+            // Use a fixed room ID for matchmaking - first player becomes host, others connect
+            const matchmakingRoomId = `matchmaking-${mode}`;
+            
+            // Try to become host first
+            matchmakingPeer = new Peer(matchmakingRoomId, {
+                secure: true
+            });
+            
+            matchmakingPeer.on('open', (id) => {
+                console.log('Matchmaking peer opened as host:', id);
+                isMatchmakingHost = true;
+                updateQueueStatus();
+            });
+            
+            matchmakingPeer.on('connection', (conn) => {
+                console.log('Player connected to matchmaking:', conn.peer);
+                conn.on('open', () => {
+                    matchmakingConnections.set(conn.peer, conn);
+                    handleMatchmakingConnection(conn);
+                });
+                
+                conn.on('error', (err) => {
+                    console.error('Matchmaking connection error:', err);
+                });
+            });
+            
+            matchmakingPeer.on('error', (err) => {
+                console.log('Could not become host, trying to connect as client...', err);
+                // If we can't become host (room already exists), connect as client
+                if (err.type === 'peer-unavailable' || err.type === 'unavailable-id') {
+                    connectAsMatchmakingClient(mode);
+                } else {
+                    // Retry after delay
+                    setTimeout(() => {
+                        if (inQueue) {
+                            attemptMatchmakingConnection(mode);
+                        }
+                    }, 2000);
+                }
+            });
+        }
+        
+        function connectAsMatchmakingClient(mode) {
+            const matchmakingRoomId = `matchmaking-${mode}`;
+            
+            // Create a new peer as client
+            if (matchmakingPeer) {
+                matchmakingPeer.destroy();
+            }
+            
+            matchmakingPeer = new Peer({
+                secure: true
+            });
+            
+            matchmakingPeer.on('open', (myId) => {
+                console.log('Matchmaking client peer opened:', myId);
+                isMatchmakingHost = false;
+                
+                // Try to connect to the matchmaking room
+                const conn = matchmakingPeer.connect(matchmakingRoomId);
+                
+                conn.on('open', () => {
+                    console.log('Connected to matchmaking room as client');
+                    matchmakingConnections.set(conn.peer, conn);
+                    handleMatchmakingConnection(conn);
+                });
+                
+                conn.on('error', (err) => {
+                    console.error('Failed to connect to matchmaking room:', err);
+                    // Retry connection
+                    setTimeout(() => {
+                        if (inQueue) {
+                            connectAsMatchmakingClient(mode);
+                        }
+                    }, 2000);
+                });
+            });
+            
+            matchmakingPeer.on('error', (err) => {
+                console.error('Matchmaking client peer error:', err);
+                setTimeout(() => {
+                    if (inQueue) {
+                        connectAsMatchmakingClient(mode);
+                    }
+                }, 2000);
+            });
+        }
+        
+        function handleMatchmakingConnection(conn) {
+            conn.on('data', (data) => {
+                console.log('Matchmaking data received:', data);
+                
+                if (data.type === 'queue_request') {
+                    // Another player is looking for a match
+                    const requiredPlayers = queueMode === '1v1' ? 2 : 4;
+                    const currentPlayers = matchmakingConnections.size + 1; // +1 for host
+                    
+                    if (currentPlayers >= requiredPlayers) {
+                        // We have enough players, start the match
+                        startMatchmakingMatch();
+                    } else {
+                        // Send queue status
+                        conn.send({
+                            type: 'queue_status',
+                            currentPlayers: currentPlayers,
+                            requiredPlayers: requiredPlayers
+                        });
+                    }
+                } else if (data.type === 'queue_status') {
+                    // Update queue status
+                    updateQueueStatus();
+                } else if (data.type === 'match_start') {
+                    // Match is starting
+                    startMatchmakingMatch();
+                }
+            });
+            
+            // Send queue request
+            conn.send({
+                type: 'queue_request',
+                mode: queueMode,
+                playerId: localPlayerId
+            });
+            
+            // Check if we have enough players to start
+            const requiredPlayers = queueMode === '1v1' ? 2 : 4;
+            const currentPlayers = matchmakingConnections.size + 1; // +1 for self
+            
+            if (currentPlayers >= requiredPlayers) {
+                // Broadcast match start to all connected players
+                matchmakingConnections.forEach((c) => {
+                    c.send({
+                        type: 'match_start',
+                        mode: queueMode
+                    });
+                });
+                startMatchmakingMatch();
+            }
+        }
+        
+        function startMatchmakingMatch() {
+            console.log('Starting matchmaking match!');
+            
+            // Clear matchmaking check interval
+            if (matchmakingCheckInterval) {
+                clearInterval(matchmakingCheckInterval);
+                matchmakingCheckInterval = null;
+            }
+            
+            // Close matchmaking connections and set up game connections
+            const matchPlayers = Array.from(matchmakingConnections.keys());
+            
+            // Initialize teams
+            initializeMatchTeams();
+            
+            // Convert matchmaking connections to game connections
+            // For now, we'll use the existing multiplayer system
+            // Set up the game as a hosted match
+            roomId = `match-${Date.now()}`;
+            isHost = isMatchmakingHost;
+            
+            if (isMatchmakingHost) {
+                // Host creates the game room
+                localPlayerId = roomId;
+                
+                // Create game peer
+                if (peer) {
+                    peer.destroy();
+                }
+                
+                peer = new Peer(roomId, {
+                    secure: true
+                });
+                
+                peer.on('open', (id) => {
+                    console.log('Game host opened:', id);
+                    // Players will connect via matchmaking connections
+                    matchmakingConnections.forEach((conn, peerId) => {
+                        // Set up game connection
+                        setupConnection(conn);
+                    });
+                });
+            } else {
+                // Client connects to host
+                const hostConn = Array.from(matchmakingConnections.values())[0];
+                if (hostConn) {
+                    setupConnection(hostConn);
+                }
+            }
+            
+            // Hide queue UI and show game
+            inQueue = false;
+            updateQueueStatus();
+            document.getElementById('queue1v1Button').style.display = 'block';
+            document.getElementById('queue2v2Button').style.display = 'block';
+            document.getElementById('cancelQueueButton').style.display = 'none';
+            
+            // Close matchmaking menu and show game
+            hideAllScreens();
+            document.getElementById('gameScreen').classList.add('active');
+            updatePlayerList();
+        }
+        
         function cancelQueue() {
             inQueue = false;
             queueMode = null;
+            isMatchmakingHost = false;
+            matchmakingRoomId = null;
+            
+            if (matchmakingCheckInterval) {
+                clearInterval(matchmakingCheckInterval);
+                matchmakingCheckInterval = null;
+            }
             
             if (matchmakingPeer) {
                 matchmakingPeer.destroy();
@@ -1141,19 +1589,6 @@
             }
         }
         
-        function broadcastQueueRequest() {
-            // In a real implementation, you'd connect to a matchmaking server
-            // For now, this is a placeholder that simulates matchmaking
-            console.log('Broadcasting queue request for', queueMode);
-            // TODO: Implement actual matchmaking server connection
-        }
-        
-        function handleMatchmakingData(conn) {
-            conn.on('data', (data) => {
-                console.log('Matchmaking data received:', data);
-                // Handle matchmaking responses
-            });
-        }
         
         // Challenges/Game Modes
         function startSpikeDodge() {
@@ -1359,11 +1794,29 @@
         }
         
         function showDeathScreen() {
+            // Update spike dodge stats
+            const wasNewRecord = spikesDodged > playerRanking.spikeDodge.bestScore;
+            if (wasNewRecord) {
+                playerRanking.spikeDodge.bestScore = spikesDodged;
+            }
+            playerRanking.spikeDodge.totalPlayed++;
+            playerRanking.spikeDodge.totalSpikesDodged += spikesDodged;
+            playerRanking.spikeDodge.averageScore = Math.round(playerRanking.spikeDodge.totalSpikesDodged / playerRanking.spikeDodge.totalPlayed);
+            saveRanking();
+            
             // Create death screen overlay
             const deathScreen = document.getElementById('deathScreen');
             if (deathScreen) {
                 deathScreen.style.display = 'block';
                 document.getElementById('spikesDodgedCount').textContent = spikesDodged;
+                const bestScoreEl = document.getElementById('bestScoreDisplay');
+                if (bestScoreEl) {
+                    bestScoreEl.textContent = playerRanking.spikeDodge.bestScore;
+                }
+                const newRecordEl = document.getElementById('newRecordDisplay');
+                if (newRecordEl) {
+                    newRecordEl.style.display = wasNewRecord ? 'block' : 'none';
+                }
             } else {
                 // Create death screen if it doesn't exist
                 const screen = document.createElement('div');
@@ -1385,7 +1838,11 @@
                 `;
                 screen.innerHTML = `
                     <h2 style="font-size: 32px; margin-bottom: 20px;">Game Over!</h2>
-                    <p style="font-size: 18px; margin-bottom: 30px;">Spikes Dodged: <span id="spikesDodgedCount">0</span></p>
+                    <div id="newRecordDisplay" style="font-size: 20px; color: #ffd700; margin-bottom: 15px; font-weight: 600; text-shadow: 0 0 10px rgba(255, 215, 0, 0.8); ${wasNewRecord ? '' : 'display: none;'}">
+                        🏆 NEW RECORD! 🏆
+                    </div>
+                    <p style="font-size: 18px; margin-bottom: 10px;">Spikes Dodged: <span id="spikesDodgedCount" style="color: #667eea; font-weight: 600;">${spikesDodged}</span></p>
+                    <p style="font-size: 14px; color: #aaa; margin-bottom: 30px;">Best Score: <span id="bestScoreDisplay" style="color: #ffd700; font-weight: 600;">${playerRanking.spikeDodge.bestScore}</span></p>
                     <button onclick="retrySpikeDodge()" style="
                         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                         color: white;
@@ -1410,7 +1867,6 @@
                     ">Go Back to Lobby</button>
                 `;
                 document.body.appendChild(screen);
-                document.getElementById('spikesDodgedCount').textContent = spikesDodged;
             }
         }
         
@@ -1487,6 +1943,7 @@
             let team2Alive = 0;
             let winnerName = null;
             let winnerPlayer = null;
+            let isLocalPlayerWinner = false;
             
             players.forEach((player, playerId) => {
                 const team = playerTeams.get(playerId);
@@ -1505,6 +1962,9 @@
                 players.forEach((player, playerId) => {
                     if (playerTeams.get(playerId) === 2 && !player.dead && player.health > 0 && !winnerPlayer) {
                         winnerPlayer = player;
+                        if (playerId === localPlayerId) {
+                            isLocalPlayerWinner = true;
+                        }
                     }
                 });
                 if (winnerPlayer) {
@@ -1515,6 +1975,9 @@
                 players.forEach((player, playerId) => {
                     if (playerTeams.get(playerId) === 1 && !player.dead && player.health > 0 && !winnerPlayer) {
                         winnerPlayer = player;
+                        if (playerId === localPlayerId) {
+                            isLocalPlayerWinner = true;
+                        }
                     }
                 });
                 if (winnerPlayer) {
@@ -1523,16 +1986,43 @@
             }
             
             if (winnerName) {
-                showVictoryScreen(winnerName);
+                // Update ranking for local player
+                if (matchInProgress && (queueMode === '1v1' || queueMode === '2v2')) {
+                    const oldRating = playerRanking.rating;
+                    if (isLocalPlayerWinner) {
+                        updateRanking('win');
+                    } else {
+                        // Check if local player is dead
+                        const localPlayerDead = localPlayer && (localPlayer.dead || localPlayer.health <= 0);
+                        if (localPlayerDead) {
+                            updateRanking('loss');
+                        }
+                    }
+                }
+                showVictoryScreen(winnerName, isLocalPlayerWinner);
             }
         }
         
-        function showVictoryScreen(winnerName) {
+        function showVictoryScreen(winnerName, isLocalPlayerWinner = false) {
             // Create or show victory screen
             const victoryScreen = document.getElementById('victoryScreen');
+            const tier = getRankTier(playerRanking.rating);
+            const ratingChange = isLocalPlayerWinner ? '+' : '-';
+            
             if (victoryScreen) {
                 victoryScreen.style.display = 'flex';
                 document.getElementById('winnerName').textContent = winnerName;
+                // Update ranking display if it exists
+                const rankingDisplay = document.getElementById('rankingDisplay');
+                if (rankingDisplay) {
+                    rankingDisplay.innerHTML = `
+                        <div style="margin: 20px 0; padding: 15px; background: rgba(102, 126, 234, 0.1); border-radius: 8px; border: 1px solid rgba(102, 126, 234, 0.3);">
+                            <div style="font-size: 18px; margin-bottom: 10px; color: ${tier.color}; font-weight: 600;">${tier.name}</div>
+                            <div style="font-size: 14px; color: #aaa;">Rating: ${playerRanking.rating} ${ratingChange}</div>
+                            <div style="font-size: 12px; color: #888; margin-top: 5px;">W: ${playerRanking.wins} | L: ${playerRanking.losses} | D: ${playerRanking.draws}</div>
+                        </div>
+                    `;
+                }
             } else {
                 // Create victory screen if it doesn't exist
                 const screen = document.createElement('div');
@@ -1553,8 +2043,14 @@
                     font-family: system-ui, -apple-system, sans-serif;
                 `;
                 screen.innerHTML = `
-                    <h2 style="font-size: 48px; margin-bottom: 20px; color: #667eea; text-shadow: 0 0 20px rgba(102, 126, 234, 0.8);">Victory!</h2>
-                    <p style="font-size: 24px; margin-bottom: 40px;"><span id="winnerName">${winnerName}</span> Won!</p>
+                    <h2 style="font-size: 48px; margin-bottom: 20px; color: #667eea; text-shadow: 0 0 20px rgba(102, 126, 234, 0.8);">${isLocalPlayerWinner ? 'Victory!' : 'Defeat'}</h2>
+                    <p style="font-size: 24px; margin-bottom: 20px;"><span id="winnerName">${winnerName}</span> ${isLocalPlayerWinner ? 'Won!' : 'Won the match!'}</p>
+                    <div id="rankingDisplay" style="margin: 20px 0; padding: 15px; background: rgba(102, 126, 234, 0.1); border-radius: 8px; border: 1px solid rgba(102, 126, 234, 0.3); text-align: center;">
+                        <div style="font-size: 18px; margin-bottom: 10px; color: ${tier.color}; font-weight: 600;">${tier.name}</div>
+                        <div style="font-size: 14px; color: #aaa;">Rating: ${playerRanking.rating}</div>
+                        <div style="font-size: 12px; color: #888; margin-top: 5px;">W: ${playerRanking.wins} | L: ${playerRanking.losses} | D: ${playerRanking.draws}</div>
+                        ${playerRanking.winStreak > 0 ? `<div style="font-size: 12px; color: #ffd700; margin-top: 5px;">🔥 Win Streak: ${playerRanking.winStreak}</div>` : ''}
+                    </div>
                     <button onclick="goBackToLobbyFromVictory()" style="
                         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                         color: white;
@@ -1744,15 +2240,9 @@
             toggleMenu();
         }
         
-        function quitGame() {
-            if (confirm('Are you sure you want to quit?')) {
-                // Leave game if in multiplayer
-                if (connections.size > 0 || isHost) {
-                    leaveGame();
-                }
-                // Could redirect or close window, for now just close menu
-                toggleMenu();
-            }
+        function goToShangkoStudio() {
+            // Navigate to ShangkoStudio homepage in the current tab
+            window.location.href = 'https://www.shangkostudio.com/';
         }
         
         // Color picker functionality
@@ -1861,6 +2351,19 @@
         
         canvas.addEventListener('mousedown', () => {
             mouseDown = true;
+            
+            // Double-click detection for dash
+            const currentTime = Date.now();
+            const timeSinceLastClick = currentTime - lastClickTime;
+            
+            if (timeSinceLastClick < DOUBLE_CLICK_DELAY && localPlayer && localPlayer.dashCooldown <= 0) {
+                // Double-click detected - trigger dash
+                localPlayer.isDashing = true;
+                localPlayer.dashCooldown = 30; // frames
+                lastClickTime = 0; // Reset to prevent triple-click from triggering again
+            } else {
+                lastClickTime = currentTime;
+            }
         });
         
         canvas.addEventListener('mouseup', () => {
