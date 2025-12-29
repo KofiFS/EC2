@@ -25,11 +25,13 @@
             height: 100%;
         }
         canvas {
-            width: 100%;
-            height: 100%;
+            display: block;
             border: 2px solid #333;
             border-radius: 8px;
             box-shadow: 0 0 20px rgba(100, 150, 255, 0.3);
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
         }
         .controls {
             width: 300px;
@@ -656,19 +658,196 @@
         // Ocean background variable (declared early so resizeCanvas can access it)
         let oceanBackground = null;
         
-        // Set canvas size to match container
+        // Base resolution for the game (maintains consistent game logic)
+        const BASE_WIDTH = 1920;
+        const BASE_HEIGHT = 1080;
+        const BASE_ASPECT_RATIO = BASE_WIDTH / BASE_HEIGHT;
+        
+        // Global scale factor for UI elements
+        let currentScale = 1;
+        let canvasDisplayWidth = BASE_WIDTH;
+        let canvasDisplayHeight = BASE_HEIGHT;
+        let canvasOffsetX = 0;
+        let canvasOffsetY = 0;
+        
+        // Set canvas size to match container with proper scaling
         function resizeCanvas() {
             const container = canvas.parentElement;
+            const containerWidth = container.clientWidth;
+            const containerHeight = container.clientHeight;
+            const containerAspectRatio = containerWidth / containerHeight;
+            
             const oldWidth = canvas.width;
             const oldHeight = canvas.height;
-            canvas.width = container.clientWidth;
-            canvas.height = container.clientHeight;
+            
+            // Calculate scale to fill container while maintaining aspect ratio
+            // Use the larger scale to ensure it fills the screen
+            let scale, displayWidth, displayHeight;
+            
+            const scaleX = containerWidth / BASE_WIDTH;
+            const scaleY = containerHeight / BASE_HEIGHT;
+            
+            // Use the smaller scale to ensure it fits (letterbox/pillarbox)
+            // This ensures the game always fits and maintains aspect ratio
+            scale = Math.min(scaleX, scaleY);
+            
+            displayWidth = BASE_WIDTH * scale;
+            displayHeight = BASE_HEIGHT * scale;
+            
+            // Store scale and dimensions for UI positioning
+            currentScale = scale;
+            canvasDisplayWidth = displayWidth;
+            canvasDisplayHeight = displayHeight;
+            canvasOffsetX = (containerWidth - displayWidth) / 2;
+            canvasOffsetY = (containerHeight - displayHeight) / 2;
+            
+            // Set canvas internal resolution (always use base resolution for game logic)
+            canvas.width = BASE_WIDTH;
+            canvas.height = BASE_HEIGHT;
+            
+            // Set canvas display size (scaled to fit container)
+            canvas.style.width = displayWidth + 'px';
+            canvas.style.height = displayHeight + 'px';
+            
+            // Always center the canvas
+            canvas.style.marginLeft = canvasOffsetX + 'px';
+            canvas.style.marginTop = canvasOffsetY + 'px';
+            canvas.style.marginRight = 'auto';
+            canvas.style.marginBottom = 'auto';
+            
+            // Update UI element positions and sizes
+            updateUIPositions();
             
             // Reinitialize ocean background if size changed
             if (oceanBackground && (oldWidth !== canvas.width || oldHeight !== canvas.height)) {
                 oceanBackground.resize();
             }
         }
+        
+        // Update UI element positions and sizes based on canvas scale
+        function updateUIPositions() {
+            const container = canvas.parentElement;
+            
+            // Update menu widget
+            const menuWidget = document.getElementById('menuWidget');
+            if (menuWidget) {
+                // Scale menu size
+                const baseMenuWidth = 280;
+                menuWidget.style.width = (baseMenuWidth * currentScale) + 'px';
+                
+                // Scale all menu elements
+                const menuButtons = menuWidget.querySelectorAll('.menu-button, .menu-toggle-button');
+                menuButtons.forEach(button => {
+                    button.style.fontSize = (14 * currentScale) + 'px';
+                    button.style.padding = (12 * currentScale) + 'px ' + (20 * currentScale) + 'px';
+                    button.style.borderRadius = (6 * currentScale) + 'px';
+                });
+                
+                // Scale menu content
+                const menuContent = menuWidget.querySelector('.menu-content');
+                if (menuContent) {
+                    menuContent.style.padding = (15 * currentScale) + 'px';
+                }
+                
+                // Scale menu headings
+                const menuHeadings = menuWidget.querySelectorAll('h3');
+                menuHeadings.forEach(heading => {
+                    heading.style.fontSize = (16 * currentScale) + 'px';
+                    heading.style.marginBottom = (12 * currentScale) + 'px';
+                });
+                
+                // Scale menu inputs
+                const menuInputs = menuWidget.querySelectorAll('.menu-input');
+                menuInputs.forEach(input => {
+                    input.style.fontSize = (13 * currentScale) + 'px';
+                    input.style.padding = (8 * currentScale) + 'px ' + (12 * currentScale) + 'px';
+                    input.style.borderRadius = (4 * currentScale) + 'px';
+                });
+                
+                // Scale other text elements
+                const infoTexts = menuWidget.querySelectorAll('.controls-info, .room-id-display, .player-list');
+                infoTexts.forEach(text => {
+                    text.style.fontSize = (12 * currentScale) + 'px';
+                });
+                
+                // Position relative to canvas display area
+                menuWidget.style.left = (canvasOffsetX + 20 * currentScale) + 'px';
+                menuWidget.style.top = (canvasOffsetY + 20 * currentScale) + 'px';
+            }
+            
+            // Update health bar container
+            const healthBarContainer = document.querySelector('.health-bar-container');
+            if (healthBarContainer) {
+                const baseHealthSize = 150;
+                healthBarContainer.style.width = (baseHealthSize * currentScale) + 'px';
+                healthBarContainer.style.height = (baseHealthSize * currentScale) + 'px';
+                healthBarContainer.style.right = (canvasOffsetX + 40 * currentScale) + 'px';
+                healthBarContainer.style.bottom = (canvasOffsetY + 40 * currentScale) + 'px';
+                
+                // Update health bar size
+                const healthBar = document.getElementById('healthBar');
+                if (healthBar && healthBar.querySelector('.health-bar-circular')) {
+                    const healthBarCircular = healthBar.querySelector('.health-bar-circular');
+                    healthBarCircular.style.width = (baseHealthSize * currentScale) + 'px';
+                    healthBarCircular.style.height = (baseHealthSize * currentScale) + 'px';
+                    
+                    // Update health bar canvas - need to recreate with new scale
+                    const healthCanvas = healthBarCircular.querySelector('canvas');
+                    if (healthCanvas && window.healthBar) {
+                        const baseRadius = 60;
+                        const baseLineWidth = 12;
+                        const baseGlowSize = 20;
+                        const newSize = (baseRadius + baseLineWidth + baseGlowSize) * 2 * currentScale;
+                        const newRadius = baseRadius * currentScale;
+                        const newLineWidth = baseLineWidth * currentScale;
+                        
+                        // Update health bar properties
+                        window.healthBar.radius = newRadius;
+                        window.healthBar.lineWidth = newLineWidth;
+                        window.healthBar.glowSize = baseGlowSize * currentScale;
+                        window.healthBar.size = newSize;
+                        
+                        healthCanvas.width = newSize;
+                        healthCanvas.height = newSize;
+                        healthCanvas.style.width = newSize + 'px';
+                        healthCanvas.style.height = newSize + 'px';
+                        
+                        // Redraw health bar
+                        window.healthBar.draw();
+                    }
+                    
+                    // Update health text size
+                    const healthText = healthBarCircular.querySelector('.health-text');
+                    if (healthText) {
+                        const healthValue = healthText.querySelector('.health-value');
+                        const healthLabel = healthText.querySelector('.health-label');
+                        if (healthValue) {
+                            healthValue.style.fontSize = (32 * currentScale) + 'px';
+                        }
+                        if (healthLabel) {
+                            healthLabel.style.fontSize = (12 * currentScale) + 'px';
+                        }
+                    }
+                }
+                
+                // Update dash indicator
+                const dashIndicator = document.getElementById('dashIndicator');
+                if (dashIndicator) {
+                    dashIndicator.style.width = (20 * currentScale) + 'px';
+                    dashIndicator.style.height = (20 * currentScale) + 'px';
+                    dashIndicator.style.bottom = (10 * currentScale) + 'px';
+                }
+            }
+            
+            // Update version info
+            const versionInfo = document.getElementById('versionInfo');
+            if (versionInfo) {
+                versionInfo.style.fontSize = (12 * currentScale) + 'px';
+                versionInfo.style.right = (canvasOffsetX + 20 * currentScale) + 'px';
+                versionInfo.style.bottom = (canvasOffsetY + 20 * currentScale) + 'px';
+            }
+        }
+        
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
         
@@ -1599,6 +1778,9 @@
             spikeSpeed = 2;
             spikeSpawnRate = 2000;
             gameStartTime = Date.now();
+            spikesDodged = 0;
+            playerDead = false;
+            deathParticles = [];
             
             // Reset player position to center
             if (localPlayer) {
@@ -1606,6 +1788,10 @@
                 localPlayer.y = canvas.height / 2;
                 localPlayer.vx = 0;
                 localPlayer.vy = 0;
+                localPlayer.visible = true;
+                localPlayer.dead = false;
+                localPlayer.health = 100;
+                localPlayer.maxHealth = 100;
             }
             
             // Reset health
@@ -1636,6 +1822,18 @@
             // Update spikes
             for (let i = spikes.length - 1; i >= 0; i--) {
                 const spike = spikes[i];
+                
+                // Store current position in trail for shadow effect
+                spike.trail.push({ x: spike.x, y: spike.y, alpha: 1.0 });
+                
+                // Limit trail length and fade out older positions
+                if (spike.trail.length > 8) {
+                    spike.trail.shift();
+                }
+                spike.trail.forEach(t => {
+                    t.alpha *= 0.85; // Fade out trail
+                });
+                
                 spike.y += spikeSpeed;
                 
                 // Remove if off screen
@@ -1672,7 +1870,8 @@
                 x: Math.random() * canvas.width,
                 y: -20,
                 radius: 8 + Math.random() * 12,
-                color: `hsl(${Math.random() * 60 + 0}, 70%, 50%)` // Red to orange
+                color: `hsl(${Math.random() * 60 + 0}, 70%, 50%)`, // Red to orange
+                trail: [] // Store previous positions for shadow effect
             };
             spikes.push(spike);
         }
@@ -1681,10 +1880,49 @@
             if (currentGameMode !== 'spike_dodge') return;
             
             spikes.forEach(spike => {
+                const size = spike.radius;
+                
+                // Draw shadow trail (after shadow effect)
+                if (spike.trail && spike.trail.length > 1) {
+                    for (let i = spike.trail.length - 1; i >= 0; i--) {
+                        const trailPos = spike.trail[i];
+                        if (trailPos.alpha > 0.05) {
+                            ctx.save();
+                            ctx.translate(trailPos.x, trailPos.y);
+                            ctx.globalAlpha = trailPos.alpha * 0.4; // Make shadow more transparent
+                            
+                            // Draw shadow spike (slightly larger and darker)
+                            const shadowSize = size * (1 + (1 - trailPos.alpha) * 0.3); // Slightly larger as it fades
+                            const shadowColor = spike.color.replace('50%)', `${Math.max(10, 50 * trailPos.alpha)}%)`);
+                            
+                            ctx.fillStyle = shadowColor;
+                            ctx.beginPath();
+                            ctx.moveTo(0, shadowSize);
+                            ctx.lineTo(-shadowSize * 0.6, -shadowSize * 0.3);
+                            ctx.lineTo(shadowSize * 0.6, -shadowSize * 0.3);
+                            ctx.closePath();
+                            ctx.fill();
+                            
+                            // Add blur effect to shadow
+                            ctx.shadowBlur = 10 * trailPos.alpha;
+                            ctx.shadowColor = shadowColor;
+                            ctx.strokeStyle = shadowColor;
+                            ctx.lineWidth = 1;
+                            ctx.beginPath();
+                            ctx.moveTo(0, shadowSize);
+                            ctx.lineTo(-shadowSize * 0.6, -shadowSize * 0.3);
+                            ctx.lineTo(shadowSize * 0.6, -shadowSize * 0.3);
+                            ctx.closePath();
+                            ctx.stroke();
+                            
+                            ctx.restore();
+                        }
+                    }
+                }
+                
+                // Draw main spike
                 ctx.save();
                 ctx.translate(spike.x, spike.y);
-                
-                const size = spike.radius;
                 
                 // Draw 3D spike pointing downward
                 // Main triangle (pointing down)
@@ -1877,10 +2115,56 @@
                 deathScreen.style.display = 'none';
             }
             
-            // Reset game
+            // IMPORTANT: Reset player dead state FIRST before anything else
             playerDead = false;
+            
+            // Reset all game state before restarting
             deathParticles = [];
-            startSpikeDodge();
+            spikesDodged = 0;
+            spikes = [];
+            spikeSpawnTimer = 0;
+            
+            // Reset player state completely
+            if (localPlayer) {
+                localPlayer.visible = true;
+                localPlayer.dead = false;
+                localPlayer.health = 100;
+                localPlayer.maxHealth = 100;
+                localPlayer.x = canvas.width / 2;
+                localPlayer.y = canvas.height / 2;
+                localPlayer.vx = 0;
+                localPlayer.vy = 0;
+            }
+            
+            // Reset health bar
+            if (healthBar) {
+                healthBar.setHealth(100, false); // Set without animation for instant reset
+            }
+            
+            // Restart the game mode - ensure it's set properly
+            currentGameMode = 'spike_dodge';
+            spikeSpeed = 2;
+            spikeSpawnRate = 2000;
+            gameStartTime = Date.now();
+            
+            // Close menu if open
+            const menuWidget = document.getElementById('menuWidget');
+            if (menuWidget && menuWidget.classList.contains('expanded')) {
+                menuWidget.classList.remove('expanded');
+                menuWidget.classList.add('collapsed');
+                menuVisible = false;
+            }
+            
+            // Force a small delay to ensure state is fully reset before game continues
+            // This ensures playerDead check in updateSpikeDodge passes
+            setTimeout(() => {
+                // Double-check playerDead is false
+                playerDead = false;
+                if (localPlayer) {
+                    localPlayer.dead = false;
+                    localPlayer.visible = true;
+                }
+            }, 10);
         }
         
         function exitSpikeDodge() {
@@ -3675,6 +3959,9 @@
             endColor: '#764ba2',
             glowColor: '#667eea'
         });
+        
+        // Store health bar globally for scaling
+        window.healthBar = healthBar;
         
         // Setup color picker first (before creating player)
         const colorPicker = document.getElementById('colorPicker');
