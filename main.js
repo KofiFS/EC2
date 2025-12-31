@@ -1,5 +1,17 @@
-const { app, BrowserWindow, Menu } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, shell } = require('electron');
 const path = require('path');
+const fs = require('fs');
+
+// Load Steam configuration
+let steamConfig = { appId: 0 };
+try {
+  const configPath = path.join(__dirname, 'steam-config.json');
+  if (fs.existsSync(configPath)) {
+    steamConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  }
+} catch (e) {
+  console.log('Could not load steam-config.json:', e.message);
+}
 
 // Enable Steam integration if available
 let steamworks;
@@ -46,24 +58,31 @@ function createWindow() {
     // Game handles its own scaling
   });
 
-  // Remove menu bar for cleaner look (optional)
-  // Menu.setApplicationMenu(null);
+  // Remove menu bar for cleaner look
+  Menu.setApplicationMenu(null);
 }
 
 // Initialize Steam API if available
 function initSteam() {
-  if (steamworks) {
+  if (steamworks && steamConfig.appId > 0) {
     try {
-      const client = steamworks.init(480); // Replace with your Steam App ID
-      console.log('Steam initialized:', client);
+      const client = steamworks.init(steamConfig.appId);
+      console.log('Steam initialized with App ID:', steamConfig.appId);
       
+      // Expose Steam client to renderer process if needed
       // You can add Steam achievements, stats, etc. here
       // Example:
       // client.achievements.activate('ACHIEVEMENT_ID');
+      
+      return client;
     } catch (e) {
       console.log('Steam initialization failed:', e);
+      console.log('Make sure Steam is running and you have a valid App ID in steam-config.json');
     }
+  } else if (steamworks && steamConfig.appId === 0) {
+    console.log('Steam App ID not configured. Set your App ID in steam-config.json');
   }
+  return null;
 }
 
 // App event handlers
@@ -84,6 +103,16 @@ app.on('window-all-closed', () => {
   }
 });
 
+// Handle quit request from renderer
+ipcMain.on('app-quit', () => {
+  app.quit();
+});
+
+// Handle open external URL request from renderer
+ipcMain.on('open-external', (event, url) => {
+  shell.openExternal(url);
+});
+
 // Handle Steam shutdown
 app.on('will-quit', () => {
   if (steamworks) {
@@ -94,4 +123,5 @@ app.on('will-quit', () => {
     }
   }
 });
+
 

@@ -55,13 +55,17 @@ Builds will be in the `dist` folder.
 
 ## Step 5: Steam Integration
 
-### Install Steamworks.js (Optional but Recommended)
+### ✅ Steamworks.js is Already Installed
 
-```bash
-npm install steamworks.js --save
-```
+The project is already configured with `steamworks.js`. 
 
-Then update `main.js` with your Steam App ID (you'll get this from Steam).
+### Configure Your Steam App ID
+
+1. Open `steam-config.json`
+2. Replace `"appId": 0` with your actual Steam App ID from Steam Partner portal
+3. Save the file
+
+The game will automatically use this App ID when Steam is available.
 
 ### Steam Features You Can Add:
 
@@ -72,11 +76,16 @@ Then update `main.js` with your Steam App ID (you'll get this from Steam).
 
 ## Step 6: Steam Submission Process
 
+**📖 See `STEAM_DEPLOYMENT.md` for detailed deployment instructions!**
+
+Quick steps:
 1. **Create Steam App**: Go to Steam Partner portal
-2. **Upload Build**: Use SteamCMD or Steamworks SDK to upload your build
-3. **Set Store Page**: Create store page with screenshots, description, etc.
-4. **Set Price**: Set to "Free" for a free game
-5. **Submit for Review**: Steam will review your game
+2. **Get your App ID** and update `steam-config.json`
+3. **Build for Steam**: `npm run build-steam`
+4. **Follow deployment guide**: See `STEAM_DEPLOYMENT.md` for complete instructions
+5. **Upload Build**: Use Steam Partner portal or SteamCMD
+6. **Set Store Page**: Create store page with screenshots, description, etc.
+7. **Submit for Review**: Steam will review your game
 
 ## Important Notes:
 
@@ -127,4 +136,5 @@ Then update `main.js` with your Steam App ID (you'll get this from Steam).
 - Steamworks.js: https://github.com/liamcottle/steamworks.js
 
 Good luck with your Steam release! 🎮
+
 

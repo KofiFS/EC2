@@ -312,6 +312,32 @@
             margin-top: 8px;
         }
         
+        /* Custom scrollbar styling */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(20, 20, 30, 0.5);
+            border-radius: 4px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 4px;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        }
+        
+        /* Firefox scrollbar */
+        .custom-scrollbar {
+            scrollbar-width: thin;
+            scrollbar-color: #667eea rgba(20, 20, 30, 0.5);
+        }
+        
         /* Menu Widget - Small compact design */
         .menu-widget {
             position: absolute;
@@ -518,14 +544,16 @@
         <div class="menu-content">
             <!-- Main Menu Screen -->
             <div class="menu-screen active" id="mainMenuScreen">
-                <button class="menu-button" onclick="resumeGame()">Resume</button>
                 <button class="menu-button" onclick="showVSMenu()">VS</button>
                 <button class="menu-button" onclick="showMultiplayerMenu()">Multiplayer</button>
+                <button class="menu-button" onclick="showTrainingMenu()">Training</button>
                 <button class="menu-button" id="challengesButton" onclick="showChallengesMenu()" style="display: none;">Challenges</button>
                 <button class="menu-button" onclick="showStatsMenu()">Stats</button>
+                <button class="menu-button" onclick="showShopMenu()">Shop</button>
                 <button class="menu-button" onclick="showControlsMenu()">Controls</button>
                 <button class="menu-button" onclick="showCustomizeMenu()">Customize</button>
-                <button class="menu-button" onclick="goToShangkoStudio()">HomePage</button>
+                <button class="menu-button" onclick="goToDiscord()">Discord</button>
+                <button class="menu-button" onclick="quitApp()">Quit</button>
             </div>
             
             <!-- Multiplayer Menu Screen -->
@@ -533,6 +561,14 @@
                 <h3>Multiplayer</h3>
                 <button class="menu-button" onclick="hostGame()">Host Game</button>
                 <button class="menu-button" onclick="showJoinScreen()">Join Game</button>
+                <button class="menu-button" onclick="showMainMenu()">Back</button>
+            </div>
+            
+            <!-- Training Menu Screen -->
+            <div class="menu-screen" id="trainingMenuScreen">
+                <h3>Training</h3>
+                <button class="menu-button" onclick="startTraining('1v1')">1v1 Training</button>
+                <button class="menu-button" onclick="startTraining('2v2')">2v2 Training</button>
                 <button class="menu-button" onclick="showMainMenu()">Back</button>
             </div>
             
@@ -574,10 +610,11 @@
                     <label style="display: block; color: #aaa; font-size: 12px; margin-bottom: 5px;">Player Name</label>
                     <input type="text" class="menu-input" id="playerNameInput" placeholder="Enter your name" maxlength="20">
                 </div>
-                <div class="color-picker-container">
-                    <h4>Player Color</h4>
-                    <input type="color" id="colorPicker" value="#3b82f6">
-                    <label>Choose your bubble color</label>
+                <div style="margin-bottom: 15px;">
+                    <h4 style="color: #fff; font-size: 14px; margin-bottom: 10px;">Player Color</h4>
+                    <div id="colorSelectionContainer" style="display: grid; grid-template-columns: repeat(3, 60px); gap: 10px; max-height: 300px; overflow-y: auto; overflow-x: hidden; padding-right: 5px;" class="custom-scrollbar">
+                        <!-- Colors will be populated by JavaScript -->
+                    </div>
                 </div>
                 <div style="margin-top: 15px;">
                     <label style="display: block; color: #aaa; font-size: 12px; margin-bottom: 5px;">Actor Image</label>
@@ -601,8 +638,8 @@
                 </div>
                 <button class="menu-button" id="queue1v1Button" onclick="joinQueue('1v1')">1v1</button>
                 <button class="menu-button" id="queue2v2Button" onclick="joinQueue('2v2')">2v2</button>
+                <button class="menu-button" id="freeForAllButton" onclick="startFreeForAll()">FreeForAll</button>
                 <button class="menu-button" id="cancelQueueButton" onclick="cancelQueue()" style="display: none;">Cancel Queue</button>
-                <button class="menu-button" onclick="showStatsMenu()">Stats</button>
                 <button class="menu-button" onclick="showMainMenu()">Back</button>
             </div>
             
@@ -623,6 +660,21 @@
                     Dodge falling spikes!<br>
                     They get faster and more numerous over time.<br><br>
                     <span style="color: #ffd700;">Best Score: <span id="spikeDodgeBestScoreDisplay">0</span></span>
+                </div>
+                <button class="menu-button" onclick="startDodgeMode()">Dodge Mode</button>
+                <div style="color: #aaa; font-size: 11px; margin-top: 10px; text-align: center;">
+                    Run away from AI Bombs!<br>
+                    One touch = instant death!<br>
+                    New bomb spawns every 10 seconds.<br>
+                    Survive as long as you can!<br><br>
+                    <span style="color: #ffd700;">Best Time: <span id="dodgeModeBestTimeDisplay">0s</span></span>
+                </div>
+                <button class="menu-button" onclick="startTargetBreak()">Break the Target</button>
+                <div style="color: #aaa; font-size: 11px; margin-top: 10px; text-align: center;">
+                    Break targets before time runs out!<br>
+                    Timer: 2-5 seconds per target.<br>
+                    Break as many as you can!<br><br>
+                    <span style="color: #ffd700;">Best Score: <span id="targetBreakBestScoreDisplay">0</span></span>
                 </div>
                 <button class="menu-button" onclick="showMainMenu()">Back</button>
             </div>
@@ -891,8 +943,58 @@
                 totalPlayed: 0,
                 totalSpikesDodged: 0,
                 averageScore: 0
+            },
+            // Dodge Mode Challenge stats
+            dodgeMode: {
+                bestTime: 0,
+                totalPlayed: 0,
+                totalTimeSurvived: 0
+            },
+            // Target Break Challenge stats
+            targetBreak: {
+                bestScore: 0,
+                totalPlayed: 0,
+                totalTargetsBroken: 0
+            },
+            // FreeForAll stats
+            freeForAll: {
+                bestSurvivalTime: 0,
+                totalPlayed: 0,
+                totalWins: 0,
+                totalTimeSurvived: 0
             }
         };
+        
+        // Currency and unlockables
+        let playerCurrency = {
+            orbs: 0
+        };
+        
+        // Available colors (all unlockable)
+        const availableColors = [
+            { id: 'default', name: 'Default Blue', hex: '#3b82f6', price: 0, unlocked: true }, // Free default
+            { id: 'red', name: 'Red', hex: '#ef4444', price: 50 },
+            { id: 'green', name: 'Green', hex: '#10b981', price: 50 },
+            { id: 'yellow', name: 'Yellow', hex: '#f59e0b', price: 50 },
+            { id: 'purple', name: 'Purple', hex: '#8b5cf6', price: 50 },
+            { id: 'pink', name: 'Pink', hex: '#ec4899', price: 75 },
+            { id: 'cyan', name: 'Cyan', hex: '#06b6d4', price: 75 },
+            { id: 'orange', name: 'Orange', hex: '#f97316', price: 75 },
+            { id: 'lime', name: 'Lime', hex: '#84cc16', price: 75 },
+            { id: 'indigo', name: 'Indigo', hex: '#6366f1', price: 100 },
+            { id: 'teal', name: 'Teal', hex: '#14b8a6', price: 100 },
+            { id: 'rose', name: 'Rose', hex: '#f43f5e', price: 100 },
+            { id: 'amber', name: 'Amber', hex: '#fbbf24', price: 100 },
+            { id: 'emerald', name: 'Emerald', hex: '#34d399', price: 150 },
+            { id: 'violet', name: 'Violet', hex: '#a78bfa', price: 150 },
+            { id: 'sky', name: 'Sky', hex: '#38bdf8', price: 150 },
+            { id: 'gold', name: 'Gold', hex: '#ffd700', price: 200 },
+            { id: 'silver', name: 'Silver', hex: '#c0c0c0', price: 200 },
+            { id: 'rainbow', name: 'Rainbow', hex: '#ff0080', price: 500 }
+        ];
+        
+        let unlockedColors = ['default']; // Array of unlocked color IDs
+        let selectedColorId = 'default';
         
         // Load ranking from localStorage
         function loadRanking() {
@@ -900,7 +1002,15 @@
                 const saved = localStorage.getItem('playerRanking');
                 if (saved) {
                     const parsed = JSON.parse(saved);
-                    playerRanking = { ...playerRanking, ...parsed };
+                    // Merge with defaults to ensure all properties exist
+                    playerRanking = {
+                        ...playerRanking,
+                        ...parsed,
+                        spikeDodge: { ...playerRanking.spikeDodge, ...(parsed.spikeDodge || {}) },
+                        dodgeMode: { ...playerRanking.dodgeMode, ...(parsed.dodgeMode || {}) },
+                        targetBreak: { ...playerRanking.targetBreak, ...(parsed.targetBreak || {}) },
+                        freeForAll: { ...playerRanking.freeForAll, ...(parsed.freeForAll || {}) }
+                    };
                 }
             } catch (e) {
                 console.warn('Could not load ranking from localStorage:', e);
@@ -969,14 +1079,126 @@
             return { name: 'Bronze', color: '#cd7f32' };
         }
         
+        // Currency and unlockables functions
+        function loadCurrency() {
+            try {
+                const saved = localStorage.getItem('playerCurrency');
+                if (saved) {
+                    playerCurrency = JSON.parse(saved);
+                }
+            } catch (e) {
+                console.warn('Could not load currency from localStorage:', e);
+            }
+        }
+        
+        function saveCurrency() {
+            try {
+                localStorage.setItem('playerCurrency', JSON.stringify(playerCurrency));
+            } catch (e) {
+                console.warn('Could not save currency to localStorage:', e);
+            }
+        }
+        
+        function loadUnlockedColors() {
+            try {
+                const saved = localStorage.getItem('unlockedColors');
+                if (saved) {
+                    unlockedColors = JSON.parse(saved);
+                }
+                const savedSelected = localStorage.getItem('selectedColorId');
+                if (savedSelected) {
+                    selectedColorId = savedSelected;
+                }
+            } catch (e) {
+                console.warn('Could not load unlocked colors from localStorage:', e);
+            }
+        }
+        
+        function saveUnlockedColors() {
+            try {
+                localStorage.setItem('unlockedColors', JSON.stringify(unlockedColors));
+                localStorage.setItem('selectedColorId', selectedColorId);
+            } catch (e) {
+                console.warn('Could not save unlocked colors to localStorage:', e);
+            }
+        }
+        
+        function addOrbs(amount) {
+            playerCurrency.orbs += amount;
+            saveCurrency();
+            updateOrbDisplay();
+        }
+        
+        function spendOrbs(amount) {
+            if (playerCurrency.orbs >= amount) {
+                playerCurrency.orbs -= amount;
+                saveCurrency();
+                updateOrbDisplay();
+                return true;
+            }
+            return false;
+        }
+        
+        function unlockColor(colorId) {
+            if (!unlockedColors.includes(colorId)) {
+                unlockedColors.push(colorId);
+                saveUnlockedColors();
+                return true;
+            }
+            return false;
+        }
+        
+        function unlockRandomColor() {
+            const lockedColors = availableColors.filter(c => !unlockedColors.includes(c.id));
+            if (lockedColors.length > 0) {
+                const randomColor = lockedColors[Math.floor(Math.random() * lockedColors.length)];
+                unlockColor(randomColor.id);
+                return randomColor;
+            }
+            return null;
+        }
+        
+        function updateOrbDisplay() {
+            const orbDisplay = document.getElementById('orbCountDisplay');
+            if (orbDisplay) {
+                orbDisplay.textContent = playerCurrency.orbs;
+            }
+        }
+        
         // Load ranking on startup
         loadRanking();
+        loadCurrency();
+        loadUnlockedColors();
+        
+        // Initialize player color from selected color
+        setTimeout(() => {
+            const color = availableColors.find(c => c.id === selectedColorId);
+            if (color && localPlayer) {
+                localPlayer.color = hexToHsl(color.hex);
+            }
+        }, 100);
+        
+        // Initialize challenge menu displays after ranking is loaded
+        setTimeout(() => {
+            const spikeDodgeBestEl = document.getElementById('spikeDodgeBestScoreDisplay');
+            if (spikeDodgeBestEl) {
+                spikeDodgeBestEl.textContent = playerRanking.spikeDodge.bestScore;
+            }
+            const dodgeModeBestEl = document.getElementById('dodgeModeBestTimeDisplay');
+            if (dodgeModeBestEl) {
+                dodgeModeBestEl.textContent = playerRanking.dodgeMode.bestTime + 's';
+            }
+            const targetBreakBestEl = document.getElementById('targetBreakBestScoreDisplay');
+            if (targetBreakBestEl) {
+                targetBreakBestEl.textContent = playerRanking.targetBreak.bestScore;
+            }
+        }, 100);
         let matchmakingRoomId = null;
         let isMatchmakingHost = false;
         let matchmakingCheckInterval = null;
         
         // Challenges/Game modes state
-        let currentGameMode = null; // 'spike_dodge' or null
+        let currentGameMode = null; // 'spike_dodge', 'dodge_mode', 'target_break', 'freeforall', 'training_1v1', 'training_2v2', or null
         let spikes = [];
         let spikeSpawnTimer = 0;
         let spikeSpeed = 2;
@@ -985,6 +1207,27 @@
         let spikesDodged = 0;
         let playerDead = false;
         let deathParticles = [];
+        
+        // Dodge Mode Challenge state
+        let aiBombs = []; // Changed from aiBots to aiBombs
+        let dodgeModeStartTime = 0;
+        let lastBombSpawnTime = 0;
+        let bombSpawnInterval = 10000; // 10 seconds
+        
+        // FreeForAll state
+        let freeForAllStartTime = 0;
+        let freeForAllInProgress = false;
+        let freeForAllSearching = false;
+        let freeForAllSearchTimeout = null;
+        let freeForAllMatchmakingPeer = null;
+        
+        // Target Break Challenge state
+        let targets = [];
+        let activeTargets = []; // Array of active targets (increases with targetsBroken)
+        let targetTimer = 0;
+        let targetTimeLimit = 0;
+        let targetsBroken = 0;
+        let targetBreakBestScore = 0;
         
         // Player bubble - initialize after canvas is resized
         function createPlayer(id, isLocal = false) {
@@ -1356,6 +1599,431 @@
             updateRankingDisplay();
         }
         
+        // FreeForAll mode
+        function startFreeForAll() {
+            // Check if already in a game
+            if (isHost || roomId) {
+                // Already in a multiplayer game - use it as FreeForAll lobby
+                freeForAllInProgress = true;
+                freeForAllStartTime = Date.now();
+                currentGameMode = 'freeforall';
+                resumeGame();
+                return;
+            }
+            
+            // Hide queue buttons like joinQueue does
+            document.getElementById('queue1v1Button').style.display = 'none';
+            document.getElementById('queue2v2Button').style.display = 'none';
+            document.getElementById('freeForAllButton').style.display = 'none';
+            document.getElementById('cancelQueueButton').style.display = 'block';
+            
+            // Start searching for FreeForAll lobby
+            freeForAllSearching = true;
+            const searchRoomId = 'freeforall-lobby';
+            
+            // Show searching status
+            const statusEl = document.getElementById('queueStatus');
+            if (statusEl) {
+                statusEl.textContent = 'Searching for FreeForAll lobby...';
+                statusEl.style.color = '#667eea';
+            }
+            
+            // Try to connect as client first (search for existing lobby)
+            freeForAllMatchmakingPeer = new Peer({
+                secure: true
+            });
+            
+            freeForAllMatchmakingPeer.on('open', (myId) => {
+                console.log('FreeForAll search peer opened:', myId);
+                
+                // Try to connect to existing FreeForAll lobby
+                const conn = freeForAllMatchmakingPeer.connect(searchRoomId);
+                
+                conn.on('open', () => {
+                    console.log('Found FreeForAll lobby! Joining...');
+                    freeForAllSearching = false;
+                    if (freeForAllSearchTimeout) {
+                        clearTimeout(freeForAllSearchTimeout);
+                        freeForAllSearchTimeout = null;
+                    }
+                    
+                    // Use the search peer as our game peer
+                    peer = freeForAllMatchmakingPeer;
+                    freeForAllMatchmakingPeer = null;
+                    
+                    // Join the existing lobby
+                    roomId = searchRoomId;
+                    isHost = false;
+                    localPlayerId = 'local';
+                    
+                    if (!localPlayer) {
+                        localPlayer = createPlayer('local', true);
+                    }
+                    players.set('local', localPlayer);
+                    
+                    // Set up connection to host
+                    connections.set(conn.peer, conn);
+                    setupConnection(conn);
+                    
+                    updateChallengesButtonVisibility();
+                    
+                    // Wait a moment for connection to establish, then start game
+                    setTimeout(() => {
+                        startFreeForAllGame();
+                    }, 500);
+                });
+                
+                conn.on('error', (err) => {
+                    console.log('No existing FreeForAll lobby found, will create one...');
+                    // Connection failed means no lobby exists - we'll create one after timeout
+                });
+            });
+            
+            freeForAllMatchmakingPeer.on('error', (err) => {
+                console.error('FreeForAll search peer error:', err);
+            });
+            
+            // Set 10 second timeout - if no lobby found, create one
+            freeForAllSearchTimeout = setTimeout(() => {
+                if (freeForAllSearching) {
+                    console.log('No FreeForAll lobby found, creating new one...');
+                    freeForAllSearching = false;
+                    
+                    // Clean up search peer
+                    if (freeForAllMatchmakingPeer) {
+                        freeForAllMatchmakingPeer.destroy();
+                        freeForAllMatchmakingPeer = null;
+                    }
+                    
+                    // Create new FreeForAll lobby as host
+                    createFreeForAllLobby();
+                }
+            }, 10000); // 10 seconds
+        }
+        
+        function createFreeForAllLobby() {
+            const freeForAllRoomId = 'freeforall-lobby';
+            
+            // Create peer as host
+            peer = new Peer(freeForAllRoomId, {
+                secure: true
+            });
+            
+            peer.on('open', (id) => {
+                console.log('FreeForAll lobby created, hosting as:', id);
+                isHost = true;
+                roomId = freeForAllRoomId;
+                localPlayerId = 'local';
+                
+                if (!localPlayer) {
+                    localPlayer = createPlayer('local', true);
+                }
+                players.set('local', localPlayer);
+                
+                updateChallengesButtonVisibility();
+                
+                // Start FreeForAll game
+                startFreeForAllGame();
+            });
+            
+            peer.on('connection', (conn) => {
+                console.log('Player joined FreeForAll lobby:', conn.peer);
+                setupConnection(conn);
+            });
+            
+            peer.on('error', (err) => {
+                console.error('FreeForAll lobby creation error:', err);
+            });
+        }
+        
+        function startFreeForAllGame() {
+            // Start the FreeForAll game
+            freeForAllInProgress = true;
+            freeForAllStartTime = Date.now();
+            currentGameMode = 'freeforall';
+            
+            // Reset all players
+            players.forEach((player, playerId) => {
+                player.health = 100;
+                player.maxHealth = 100;
+                player.dead = false;
+                player.visible = true;
+                player.x = canvas.width / 2 + (Math.random() - 0.5) * 200;
+                player.y = canvas.height / 2 + (Math.random() - 0.5) * 200;
+                player.vx = 0;
+                player.vy = 0;
+            });
+            
+            if (localPlayer) {
+                localPlayer.health = 100;
+                localPlayer.maxHealth = 100;
+                localPlayer.dead = false;
+                localPlayer.visible = true;
+            }
+            
+            if (healthBar) {
+                healthBar.setHealth(100);
+            }
+            
+            playerDead = false;
+            deathParticles = [];
+            
+            // Hide menu
+            resumeGame();
+            
+            // Update status
+            const statusEl = document.getElementById('queueStatus');
+            if (statusEl) {
+                statusEl.textContent = 'FreeForAll in progress!';
+                statusEl.style.color = '#00ff88';
+            }
+        }
+        
+        function checkFreeForAllWinner() {
+            if (!freeForAllInProgress || currentGameMode !== 'freeforall') return;
+            
+            let alivePlayers = [];
+            let aliveCount = 0;
+            
+            // Check all players including local player
+            players.forEach((player, playerId) => {
+                if (player && !player.dead && player.health > 0) {
+                    alivePlayers.push({ id: playerId, player: player });
+                    aliveCount++;
+                }
+            });
+            
+            // Also check local player separately if not in players map
+            if (localPlayer && !players.has(localPlayerId)) {
+                if (!localPlayer.dead && localPlayer.health > 0) {
+                    alivePlayers.push({ id: localPlayerId, player: localPlayer });
+                    aliveCount++;
+                }
+            }
+            
+            // If only one player left, they win
+            if (aliveCount === 1 && alivePlayers.length === 1) {
+                const winner = alivePlayers[0];
+                const isLocalWinner = winner.id === localPlayerId;
+                
+                // Calculate survival time for all players
+                const survivalTime = Math.floor((Date.now() - freeForAllStartTime) / 1000);
+                
+                // Reset FreeForAll state BEFORE showing screens to prevent multiple checks
+                freeForAllInProgress = false;
+                currentGameMode = null;
+                
+                if (isLocalWinner) {
+                    // Local player won - update stats
+                    playerRanking.freeForAll.totalWins++;
+                    if (survivalTime > playerRanking.freeForAll.bestSurvivalTime) {
+                        playerRanking.freeForAll.bestSurvivalTime = survivalTime;
+                    }
+                    playerRanking.freeForAll.totalTimeSurvived += survivalTime;
+                    playerRanking.freeForAll.totalPlayed++;
+                    saveRanking();
+                    
+                    // Show victory screen - winner stays in game
+                    showFreeForAllVictoryScreen(winner.player.name || 'You', true, survivalTime);
+                } else {
+                    // Local player lost - show defeat screen
+                    if (localPlayer && (localPlayer.dead || localPlayer.health <= 0)) {
+                        // Update stats for time survived before death
+                        if (survivalTime > playerRanking.freeForAll.bestSurvivalTime) {
+                            playerRanking.freeForAll.bestSurvivalTime = survivalTime;
+                        }
+                        playerRanking.freeForAll.totalTimeSurvived += survivalTime;
+                        playerRanking.freeForAll.totalPlayed++;
+                        saveRanking();
+                        
+                        showFreeForAllDefeatScreen(winner.player.name || 'Winner', survivalTime);
+                    } else {
+                        // Local player is still alive but someone else won? This shouldn't happen
+                        // But if it does, show defeat screen anyway
+                        playerRanking.freeForAll.totalPlayed++;
+                        saveRanking();
+                        showFreeForAllDefeatScreen(winner.player.name || 'Winner', survivalTime);
+                    }
+                }
+            } else if (aliveCount === 0) {
+                // Everyone died - reset
+                freeForAllInProgress = false;
+                currentGameMode = null;
+                playerRanking.freeForAll.totalPlayed++;
+                saveRanking();
+            }
+            // If aliveCount > 1, game continues
+        }
+        
+        function showFreeForAllVictoryScreen(winnerName, isLocalWinner, survivalTime) {
+            const screen = document.createElement('div');
+            screen.id = 'freeForAllVictoryScreen';
+            screen.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.9);
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                z-index: 10001;
+                color: white;
+                font-family: system-ui, -apple-system, sans-serif;
+            `;
+            screen.innerHTML = `
+                <h2 style="font-size: 36px; margin-bottom: 20px; color: #ffd700;">🏆 VICTORY! 🏆</h2>
+                <p style="font-size: 24px; margin-bottom: 10px;">${winnerName} Wins!</p>
+                <p style="font-size: 18px; color: #aaa; margin-bottom: 30px;">Survival Time: ${survivalTime}s</p>
+                <p style="font-size: 14px; color: #667eea; margin-bottom: 30px;">You stay in the game!</p>
+                <button onclick="closeFreeForAllVictoryScreen()" style="
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    border: none;
+                    padding: 15px 30px;
+                    border-radius: 8px;
+                    font-size: 16px;
+                    font-weight: 600;
+                    cursor: pointer;
+                ">Continue</button>
+            `;
+            document.body.appendChild(screen);
+        }
+        
+        function showFreeForAllDefeatScreen(winnerName, survivalTime) {
+            const screen = document.createElement('div');
+            screen.id = 'freeForAllDefeatScreen';
+            screen.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.9);
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                z-index: 10001;
+                color: white;
+                font-family: system-ui, -apple-system, sans-serif;
+            `;
+            screen.innerHTML = `
+                <h2 style="font-size: 32px; margin-bottom: 20px; color: #ff4444;">Defeated</h2>
+                <p style="font-size: 20px; margin-bottom: 10px;">${winnerName} is the last one standing!</p>
+                <p style="font-size: 16px; color: #aaa; margin-bottom: 10px;">You survived: ${survivalTime}s</p>
+                <p style="font-size: 14px; color: #667eea; margin-bottom: 30px;">Best Survival Time: ${playerRanking.freeForAll.bestSurvivalTime}s</p>
+                <button onclick="retryFreeForAll()" style="
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    border: none;
+                    padding: 15px 30px;
+                    border-radius: 8px;
+                    font-size: 16px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    margin: 10px;
+                ">Try Again</button>
+                <button onclick="exitFreeForAll()" style="
+                    background: rgba(100, 100, 100, 0.5);
+                    color: white;
+                    border: none;
+                    padding: 15px 30px;
+                    border-radius: 8px;
+                    font-size: 16px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    margin: 10px;
+                ">Back to Lobby</button>
+            `;
+            document.body.appendChild(screen);
+        }
+        
+        function closeFreeForAllVictoryScreen() {
+            const screen = document.getElementById('freeForAllVictoryScreen');
+            if (screen) {
+                screen.remove();
+            }
+        }
+        
+        function retryFreeForAll() {
+            const screen = document.getElementById('freeForAllDefeatScreen');
+            if (screen) {
+                screen.remove();
+            }
+            
+            // Reset player
+            if (localPlayer) {
+                localPlayer.visible = true;
+                localPlayer.dead = false;
+                localPlayer.health = 100;
+                localPlayer.maxHealth = 100;
+                localPlayer.x = canvas.width / 2;
+                localPlayer.y = canvas.height / 2;
+                localPlayer.vx = 0;
+                localPlayer.vy = 0;
+            }
+            
+            if (healthBar) {
+                healthBar.setHealth(100, false);
+            }
+            
+            playerDead = false;
+            deathParticles = [];
+            
+            // Restart FreeForAll if still in a game
+            if (isHost || roomId) {
+                freeForAllInProgress = true;
+                freeForAllStartTime = Date.now();
+                currentGameMode = 'freeforall';
+            }
+        }
+        
+        function exitFreeForAll() {
+            const screen = document.getElementById('freeForAllDefeatScreen');
+            if (screen) {
+                screen.remove();
+            }
+            
+            // Leave the game and go back to lobby
+            if (peer) {
+                peer.destroy();
+                peer = null;
+            }
+            if (roomId) {
+                roomId = null;
+            }
+            isHost = false;
+            players.clear();
+            connections.clear();
+            
+            // Reset player
+            if (localPlayer) {
+                localPlayer.visible = true;
+                localPlayer.dead = false;
+                localPlayer.health = 100;
+                localPlayer.maxHealth = 100;
+                localPlayer.x = canvas.width / 2;
+                localPlayer.y = canvas.height / 2;
+                localPlayer.vx = 0;
+                localPlayer.vy = 0;
+            }
+            
+            if (healthBar) {
+                healthBar.setHealth(100);
+            }
+            
+            playerDead = false;
+            deathParticles = [];
+            freeForAllInProgress = false;
+            currentGameMode = null;
+            
+            // Go back to main menu
+            showMainMenu();
+        }
+        
         function showStatsMenu() {
             hideAllScreens();
             document.getElementById('statsMenuScreen').classList.add('active');
@@ -1462,6 +2130,58 @@
                     </div>
                 </div>
                 
+                <div style="background: rgba(255, 100, 100, 0.1); padding: 12px; border-radius: 6px; margin-bottom: 15px; border: 1px solid rgba(255, 100, 100, 0.3);">
+                    <div style="font-size: 14px; font-weight: 600; color: #ff6464; margin-bottom: 10px;">Dodge Mode Challenge</div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="color: #aaa; font-size: 11px;">Best Time:</span>
+                        <span style="color: #ffd700; font-weight: 600; font-size: 11px;">${playerRanking.dodgeMode.bestTime}s</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="color: #aaa; font-size: 11px;">Times Played:</span>
+                        <span style="color: #fff; font-weight: 600; font-size: 11px;">${playerRanking.dodgeMode.totalPlayed}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #aaa; font-size: 11px;">Total Time Survived:</span>
+                        <span style="color: #fff; font-weight: 600; font-size: 11px;">${Math.floor(playerRanking.dodgeMode.totalTimeSurvived / 60)}m ${playerRanking.dodgeMode.totalTimeSurvived % 60}s</span>
+                    </div>
+                </div>
+                
+                <div style="background: rgba(100, 255, 100, 0.1); padding: 12px; border-radius: 6px; margin-bottom: 15px; border: 1px solid rgba(100, 255, 100, 0.3);">
+                    <div style="font-size: 14px; font-weight: 600; color: #64ff64; margin-bottom: 10px;">Target Break Challenge</div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="color: #aaa; font-size: 11px;">Best Score:</span>
+                        <span style="color: #ffd700; font-weight: 600; font-size: 11px;">${playerRanking.targetBreak.bestScore}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="color: #aaa; font-size: 11px;">Times Played:</span>
+                        <span style="color: #fff; font-weight: 600; font-size: 11px;">${playerRanking.targetBreak.totalPlayed}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #aaa; font-size: 11px;">Total Targets Broken:</span>
+                        <span style="color: #fff; font-weight: 600; font-size: 11px;">${playerRanking.targetBreak.totalTargetsBroken}</span>
+                    </div>
+                </div>
+                
+                <div style="background: rgba(200, 100, 255, 0.1); padding: 12px; border-radius: 6px; margin-bottom: 15px; border: 1px solid rgba(200, 100, 255, 0.3);">
+                    <div style="font-size: 14px; font-weight: 600; color: #c864ff; margin-bottom: 10px;">FreeForAll Stats</div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="color: #aaa; font-size: 11px;">Best Survival Time:</span>
+                        <span style="color: #ffd700; font-weight: 600; font-size: 11px;">${playerRanking.freeForAll.bestSurvivalTime}s</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="color: #aaa; font-size: 11px;">Times Played:</span>
+                        <span style="color: #fff; font-weight: 600; font-size: 11px;">${playerRanking.freeForAll.totalPlayed}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="color: #aaa; font-size: 11px;">Total Wins:</span>
+                        <span style="color: #00ff88; font-weight: 600; font-size: 11px;">${playerRanking.freeForAll.totalWins}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #aaa; font-size: 11px;">Total Time Survived:</span>
+                        <span style="color: #fff; font-weight: 600; font-size: 11px;">${Math.floor(playerRanking.freeForAll.totalTimeSurvived / 60)}m ${playerRanking.freeForAll.totalTimeSurvived % 60}s</span>
+                    </div>
+                </div>
+                
                 ${otherPlayersStats.length > 0 ? `
                     <div style="background: rgba(100, 200, 255, 0.1); padding: 12px; border-radius: 6px; border: 1px solid rgba(100, 200, 255, 0.3);">
                         <div style="font-size: 14px; font-weight: 600; color: #64c8ff; margin-bottom: 10px;">Other Players in Game</div>
@@ -1485,13 +2205,403 @@
             `;
         }
         
+        function showTrainingMenu() {
+            hideAllScreens();
+            document.getElementById('trainingMenuScreen').classList.add('active');
+        }
+        
+        function startTraining(mode) {
+            // Set training mode
+            trainingMode = mode;
+            currentGameMode = mode === '1v1' ? 'training_1v1' : 'training_2v2';
+            trainingAIBots = [];
+            trainingRespawnTimer = 0;
+            playerDead = false;
+            deathParticles = [];
+            
+            // Reset player
+            if (localPlayer) {
+                localPlayer.x = canvas.width / 2;
+                localPlayer.y = canvas.height / 2;
+                localPlayer.vx = 0;
+                localPlayer.vy = 0;
+                localPlayer.visible = true;
+                localPlayer.dead = false;
+                localPlayer.health = 100;
+                localPlayer.maxHealth = 100;
+            }
+            
+            if (healthBar) {
+                healthBar.setHealth(100);
+            }
+            
+            // Spawn AI bots based on mode
+            const aiCount = mode === '1v1' ? 1 : 2;
+            for (let i = 0; i < aiCount; i++) {
+                spawnTrainingAI(i);
+            }
+            
+            // Hide menu and start game
+            hideAllScreens();
+            resumeGame();
+        }
+        
+        function spawnTrainingAI(index) {
+            // Spawn AI at random position away from player
+            const angle = Math.random() * Math.PI * 2;
+            const distance = Math.max(canvas.width, canvas.height) * 0.3;
+            const ai = {
+                id: 'training_ai_' + index,
+                x: canvas.width / 2 + Math.cos(angle) * distance,
+                y: canvas.height / 2 + Math.sin(angle) * distance,
+                vx: 0,
+                vy: 0,
+                baseRadius: DEFAULT_BUBBLE_SIZE,
+                scaleX: 1,
+                scaleY: 1,
+                targetScaleX: 1,
+                targetScaleY: 1,
+                rotation: 0,
+                color: `hsl(${Math.random() * 60 + 0}, 100%, 50%)`, // Red to orange
+                health: 100,
+                maxHealth: 100,
+                dead: false,
+                visible: true,
+                lastAttackTime: 0,
+                attackCooldown: 2000 + Math.random() * 3000, // 2-5 seconds
+                wanderTargetX: null,
+                wanderTargetY: null,
+                wanderTimer: 0,
+                lastCollisionTime: 0
+            };
+            trainingAIBots.push(ai);
+        }
+        
+        function updateTrainingMode(deltaTime) {
+            if (currentGameMode !== 'training_1v1' && currentGameMode !== 'training_2v2') return;
+            if (playerDead) return;
+            
+            // Check if all AIs are dead
+            const aliveAIs = trainingAIBots.filter(ai => !ai.dead);
+            const deadAIs = trainingAIBots.filter(ai => ai.dead);
+            
+            // If all AIs are dead, start respawn timer
+            if (aliveAIs.length === 0 && deadAIs.length > 0) {
+                trainingRespawnTimer += deltaTime;
+                
+                if (trainingRespawnTimer >= trainingRespawnDelay) {
+                    // Respawn all AIs
+                    trainingRespawnTimer = 0;
+                    const aiCount = trainingMode === '1v1' ? 1 : 2;
+                    trainingAIBots = []; // Clear dead AIs
+                    
+                    for (let i = 0; i < aiCount; i++) {
+                        spawnTrainingAI(i);
+                    }
+                }
+            } else {
+                // Reset timer if there are alive AIs
+                trainingRespawnTimer = 0;
+            }
+            
+            // Update each AI bot
+            for (let i = trainingAIBots.length - 1; i >= 0; i--) {
+                const ai = trainingAIBots[i];
+                if (ai.dead) {
+                    // Don't remove dead AIs immediately - keep them for respawn check
+                    continue;
+                }
+                
+                updateTrainingAI(ai, deltaTime);
+                
+                // Check collision with player
+                if (localPlayer && !playerDead && !localPlayer.dead) {
+                    const dx = ai.x - localPlayer.x;
+                    const dy = ai.y - localPlayer.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const collisionDist = ai.baseRadius + localPlayer.baseRadius;
+                    
+                    if (dist < collisionDist) {
+                        handleTrainingCollision(ai, localPlayer);
+                    }
+                }
+            }
+            
+            // Update death particles
+            updateDeathParticles();
+        }
+        
+        function updateTrainingAI(ai, deltaTime) {
+            if (!localPlayer || playerDead) return;
+            
+            const moveSpeed = DEFAULT_MOVE_SPEED * 0.6; // Slower than player
+            const now = Date.now();
+            
+            // Random wandering behavior
+            ai.wanderTimer += deltaTime;
+            if (!ai.wanderTargetX || ai.wanderTimer > 2000 + Math.random() * 2000) {
+                // Pick new random target
+                ai.wanderTargetX = Math.random() * canvas.width;
+                ai.wanderTargetY = Math.random() * canvas.height;
+                ai.wanderTimer = 0;
+            }
+            
+            // Move towards wander target
+            const dx = ai.wanderTargetX - ai.x;
+            const dy = ai.wanderTargetY - ai.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            if (dist > 10) {
+                const dirX = dx / dist;
+                const dirY = dy / dist;
+                ai.vx += dirX * moveSpeed * 0.3;
+                ai.vy += dirY * moveSpeed * 0.3;
+            }
+            
+            // Random attack behavior - occasionally dash towards player
+            if (now - ai.lastAttackTime > ai.attackCooldown) {
+                const playerDx = localPlayer.x - ai.x;
+                const playerDy = localPlayer.y - ai.y;
+                const playerDist = Math.sqrt(playerDx * playerDx + playerDy * playerDy);
+                
+                if (playerDist < canvas.width * 0.5) {
+                    // Dash towards player
+                    const dirX = playerDx / playerDist;
+                    const dirY = playerDy / playerDist;
+                    ai.vx += dirX * moveSpeed * 2;
+                    ai.vy += dirY * moveSpeed * 2;
+                    ai.lastAttackTime = now;
+                    ai.attackCooldown = 2000 + Math.random() * 3000; // Next attack in 2-5 seconds
+                }
+            }
+            
+            // Removed random damage - damage only occurs on collision
+            
+            // Apply friction
+            ai.vx *= 0.9;
+            ai.vy *= 0.9;
+            
+            // Update position
+            ai.x += ai.vx;
+            ai.y += ai.vy;
+            
+            // Boundary collision
+            const radius = ai.baseRadius;
+            if (ai.x - radius < 0) {
+                ai.x = radius;
+                ai.vx = Math.abs(ai.vx) * 0.8;
+            }
+            if (ai.x + radius > canvas.width) {
+                ai.x = canvas.width - radius;
+                ai.vx = -Math.abs(ai.vx) * 0.8;
+            }
+            if (ai.y - radius < 0) {
+                ai.y = radius;
+                ai.vy = Math.abs(ai.vy) * 0.8;
+            }
+            if (ai.y + radius > canvas.height) {
+                ai.y = canvas.height - radius;
+                ai.vy = -Math.abs(ai.vy) * 0.8;
+            }
+            
+            // Update squash and stretch based on velocity
+            const velocity = Math.sqrt(ai.vx * ai.vx + ai.vy * ai.vy);
+            if (velocity > 0.5) {
+                const angle = Math.atan2(ai.vy, ai.vx);
+                ai.rotation = angle;
+                const velocityRatio = Math.min(velocity / (moveSpeed * 2), 1);
+                ai.targetScaleX = 1 + 0.3 * velocityRatio;
+                ai.targetScaleY = 1 - 0.2 * velocityRatio;
+            } else {
+                ai.targetScaleX = 1;
+                ai.targetScaleY = 1;
+            }
+            
+            ai.scaleX += (ai.targetScaleX - ai.scaleX) * 0.1;
+            ai.scaleY += (ai.targetScaleY - ai.scaleY) * 0.1;
+        }
+        
+        function handleTrainingCollision(ai, player) {
+            const dx = player.x - ai.x;
+            const dy = player.y - ai.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const minDistance = ai.baseRadius + player.baseRadius;
+            
+            if (distance < minDistance && distance > 0) {
+                // Prevent multiple damage from same collision (cooldown of 0.5 seconds)
+                const now = Date.now();
+                const collisionCooldown = 500; // 500ms cooldown
+                
+                // Calculate overlap
+                const overlap = minDistance - distance;
+                const separationX = (dx / distance) * overlap * 0.5;
+                const separationY = (dy / distance) * overlap * 0.5;
+                
+                // Store velocities before collision to calculate recoil
+                const aiVelBefore = Math.sqrt(ai.vx * ai.vx + ai.vy * ai.vy);
+                const playerVelBefore = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
+                
+                // Push entities apart
+                ai.x -= separationX;
+                ai.y -= separationY;
+                player.x += separationX;
+                player.y += separationY;
+                
+                // Apply collision response (bounce effect) - same as player-player collisions
+                const normalX = dx / distance;
+                const normalY = dy / distance;
+                const relativeVx = player.vx - ai.vx;
+                const relativeVy = player.vy - ai.vy;
+                const relativeSpeed = relativeVx * normalX + relativeVy * normalY;
+                
+                // Only apply bounce if entities are moving towards each other
+                if (relativeSpeed < 0) {
+                    const bounceStrength = 0.3; // How much velocity is transferred
+                    const impulse = relativeSpeed * bounceStrength;
+                    
+                    ai.vx += impulse * normalX;
+                    ai.vy += impulse * normalY;
+                    player.vx -= impulse * normalX;
+                    player.vy -= impulse * normalY;
+                    
+                    // Calculate recoil (change in velocity magnitude)
+                    const aiVelAfter = Math.sqrt(ai.vx * ai.vx + ai.vy * ai.vy);
+                    const playerVelAfter = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
+                    
+                    const aiRecoil = Math.abs(aiVelAfter - aiVelBefore);
+                    const playerRecoil = Math.abs(playerVelAfter - playerVelBefore);
+                    
+                    // Apply damage to entity with more recoil (only if cooldown has passed)
+                    if (now - ai.lastCollisionTime > collisionCooldown && 
+                        (!player.lastCollisionTime || now - player.lastCollisionTime > collisionCooldown)) {
+                        
+                        // Determine who is hitting based on initial velocities (before collision)
+                        const aiInitialSpeed = aiVelBefore;
+                        const playerInitialSpeed = playerVelBefore;
+                        
+                        if (aiInitialSpeed > playerInitialSpeed * 1.1) {
+                            // AI is hitting player (AI was moving faster)
+                            const newHealth = Math.max(0, player.health - 10);
+                            player.health = newHealth;
+                            player.maxHealth = player.maxHealth || 100;
+                            
+                            if (!player.lastCollisionTime) {
+                                player.lastCollisionTime = 0;
+                            }
+                            player.lastCollisionTime = now;
+                            ai.lastCollisionTime = now;
+                            
+                            if (healthBar && player.id === localPlayerId) {
+                                healthBar.setHealth(newHealth);
+                            }
+                            
+                            if (newHealth <= 0 && !player.dead) {
+                                player.dead = true;
+                                player.visible = false;
+                                if (player.id === localPlayerId) {
+                                    playerDead = true;
+                                    triggerDeathEffect();
+                                }
+                            }
+                        } else if (playerInitialSpeed > aiInitialSpeed * 1.1) {
+                            // Player is hitting AI (Player was moving faster)
+                            const newAIHealth = Math.max(0, ai.health - 10);
+                            ai.health = newAIHealth;
+                            ai.lastCollisionTime = now;
+                            
+                            if (!player.lastCollisionTime) {
+                                player.lastCollisionTime = 0;
+                            }
+                            player.lastCollisionTime = now;
+                            
+                            if (newAIHealth <= 0 && !ai.dead) {
+                                ai.dead = true;
+                                ai.visible = false;
+                            }
+                        } else {
+                            // Similar speeds - both take damage
+                            const newPlayerHealth = Math.max(0, player.health - 5);
+                            const newAIHealth = Math.max(0, ai.health - 5);
+                            
+                            player.health = newPlayerHealth;
+                            player.maxHealth = player.maxHealth || 100;
+                            ai.health = newAIHealth;
+                            
+                            if (!player.lastCollisionTime) {
+                                player.lastCollisionTime = 0;
+                            }
+                            player.lastCollisionTime = now;
+                            ai.lastCollisionTime = now;
+                            
+                            if (healthBar && player.id === localPlayerId) {
+                                healthBar.setHealth(newPlayerHealth);
+                            }
+                            
+                            if (newPlayerHealth <= 0 && !player.dead) {
+                                player.dead = true;
+                                player.visible = false;
+                                if (player.id === localPlayerId) {
+                                    playerDead = true;
+                                    triggerDeathEffect();
+                                }
+                            }
+                            
+                            if (newAIHealth <= 0 && !ai.dead) {
+                                ai.dead = true;
+                                ai.visible = false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        function drawTrainingAI() {
+            trainingAIBots.forEach(ai => {
+                if (!ai.visible || ai.dead) return;
+                
+                ctx.save();
+                ctx.translate(ai.x, ai.y);
+                ctx.scale(ai.scaleX, ai.scaleY);
+                ctx.rotate(ai.rotation);
+                
+                // Draw AI bubble
+                drawBubble(0, 0, 1, 1, 0, 1, ai.color);
+                
+                ctx.restore();
+                
+                // Draw health bar
+                const barWidth = ai.baseRadius * 2;
+                const barHeight = 4;
+                const barX = ai.x - barWidth / 2;
+                const barY = ai.y - ai.baseRadius - 10;
+                
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fillRect(barX, barY, barWidth, barHeight);
+                
+                const healthPercent = ai.health / ai.maxHealth;
+                ctx.fillStyle = healthPercent > 0.5 ? 'rgba(0, 255, 0, 0.8)' : 
+                               healthPercent > 0.25 ? 'rgba(255, 255, 0, 0.8)' : 
+                               'rgba(255, 0, 0, 0.8)';
+                ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+            });
+        }
+        
         function showChallengesMenu() {
             hideAllScreens();
             document.getElementById('challengesMenuScreen').classList.add('active');
-            // Update best score display
-            const bestScoreEl = document.getElementById('spikeDodgeBestScoreDisplay');
-            if (bestScoreEl) {
-                bestScoreEl.textContent = playerRanking.spikeDodge.bestScore;
+            // Update best score displays
+            const spikeDodgeBestEl = document.getElementById('spikeDodgeBestScoreDisplay');
+            if (spikeDodgeBestEl) {
+                spikeDodgeBestEl.textContent = playerRanking.spikeDodge.bestScore;
+            }
+            const dodgeModeBestEl = document.getElementById('dodgeModeBestTimeDisplay');
+            if (dodgeModeBestEl) {
+                dodgeModeBestEl.textContent = playerRanking.dodgeMode.bestTime + 's';
+            }
+            const targetBreakBestEl = document.getElementById('targetBreakBestScoreDisplay');
+            if (targetBreakBestEl) {
+                targetBreakBestEl.textContent = playerRanking.targetBreak.bestScore;
             }
         }
         
@@ -1525,6 +2635,7 @@
             // Update UI
             document.getElementById('queue1v1Button').style.display = 'none';
             document.getElementById('queue2v2Button').style.display = 'none';
+            document.getElementById('freeForAllButton').style.display = 'none';
             document.getElementById('cancelQueueButton').style.display = 'block';
         }
         
@@ -1749,9 +2860,23 @@
             }
             matchmakingConnections.clear();
             
+            // Cancel FreeForAll search if active
+            if (freeForAllSearching) {
+                freeForAllSearching = false;
+                if (freeForAllSearchTimeout) {
+                    clearTimeout(freeForAllSearchTimeout);
+                    freeForAllSearchTimeout = null;
+                }
+                if (freeForAllMatchmakingPeer) {
+                    freeForAllMatchmakingPeer.destroy();
+                    freeForAllMatchmakingPeer = null;
+                }
+            }
+            
             updateQueueStatus();
             document.getElementById('queue1v1Button').style.display = 'block';
             document.getElementById('queue2v2Button').style.display = 'block';
+            document.getElementById('freeForAllButton').style.display = 'block';
             document.getElementById('cancelQueueButton').style.display = 'none';
         }
         
@@ -1970,6 +3095,450 @@
             });
         }
         
+        // AI Fight Challenge
+        function startDodgeMode() {
+            currentGameMode = 'dodge_mode';
+            aiBombs = [];
+            dodgeModeStartTime = Date.now();
+            // Set lastBombSpawnTime to 5 seconds ago, so first bomb spawns after 5 seconds
+            lastBombSpawnTime = Date.now() - (bombSpawnInterval - 5000); // 5 second delay before first spawn
+            playerDead = false;
+            deathParticles = [];
+            
+            // Reset player
+            if (localPlayer) {
+                localPlayer.x = canvas.width / 2;
+                localPlayer.y = canvas.height / 2;
+                localPlayer.vx = 0;
+                localPlayer.vy = 0;
+                localPlayer.visible = true;
+                localPlayer.dead = false;
+                localPlayer.health = 100;
+                localPlayer.maxHealth = 100;
+            }
+            
+            if (healthBar) {
+                healthBar.setHealth(100);
+            }
+            
+            // Don't spawn first bomb immediately - wait 5 seconds
+            // The updateDodgeMode function will handle spawning after the delay
+            
+            resumeGame();
+        }
+        
+        function spawnBomb() {
+            const bomb = {
+                id: 'bomb_' + Date.now() + '_' + Math.random(),
+                x: canvas.width / 2, // Always spawn in the center
+                y: canvas.height / 2,
+                vx: 0,
+                vy: 0,
+                baseRadius: DEFAULT_BUBBLE_SIZE,
+                scaleX: 1,
+                scaleY: 1,
+                targetScaleX: 1,
+                targetScaleY: 1,
+                rotation: 0,
+                dead: false,
+                visible: true,
+                color: `hsl(${Math.random() * 60 + 0}, 100%, 50%)`, // Red to orange colors
+                pulse: 0 // For pulsing animation
+            };
+            aiBombs.push(bomb);
+        }
+        
+        function updateDodgeMode(deltaTime) {
+            if (currentGameMode !== 'dodge_mode' || playerDead) return;
+            
+            const now = Date.now();
+            
+            // Spawn new bomb every 10 seconds
+            if (now - lastBombSpawnTime >= bombSpawnInterval) {
+                spawnBomb();
+                lastBombSpawnTime = now;
+            }
+            
+            // Update bombs
+            for (let i = aiBombs.length - 1; i >= 0; i--) {
+                const bomb = aiBombs[i];
+                if (bomb.dead) {
+                    aiBombs.splice(i, 1);
+                    continue;
+                }
+                
+                updateBomb(bomb, deltaTime);
+                
+                // Check collision with player - instant death
+                if (localPlayer && !playerDead && !localPlayer.dead) {
+                    const dx = bomb.x - localPlayer.x;
+                    const dy = bomb.y - localPlayer.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const collisionDist = bomb.baseRadius + localPlayer.baseRadius;
+                    
+                    if (dist < collisionDist) {
+                        // Bomb touches player - instant death
+                        playerDead = true;
+                        if (localPlayer) {
+                            localPlayer.dead = true;
+                            localPlayer.visible = false;
+                        }
+                        if (healthBar) {
+                            healthBar.setHealth(0, false); // Instant death, no animation
+                        }
+                        // Bomb explodes
+                        bomb.dead = true;
+                        bomb.visible = false;
+                        // Trigger death effect immediately
+                        triggerDeathEffect();
+                    }
+                }
+                
+                // Check collision with other bombs
+                for (let j = i + 1; j < aiBombs.length; j++) {
+                    const otherBomb = aiBombs[j];
+                    if (otherBomb.dead) continue;
+                    
+                    const dx = bomb.x - otherBomb.x;
+                    const dy = bomb.y - otherBomb.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const collisionDist = bomb.baseRadius + otherBomb.baseRadius;
+                    
+                    if (dist < collisionDist) {
+                        // Bombs touch each other - both explode
+                        bomb.dead = true;
+                        bomb.visible = false;
+                        otherBomb.dead = true;
+                        otherBomb.visible = false;
+                    }
+                }
+            }
+            
+            // Update death particles
+            updateDeathParticles();
+        }
+        
+        function updateBomb(bomb, deltaTime) {
+            if (!localPlayer || playerDead) return;
+            
+            const moveSpeed = DEFAULT_MOVE_SPEED * 0.8; // Slightly slower than player
+            
+            // Update pulse animation
+            bomb.pulse += deltaTime * 0.015;
+            
+            // Simple chase behavior - always chase player
+            const dx = localPlayer.x - bomb.x;
+            const dy = localPlayer.y - bomb.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            if (dist > 0) {
+                const dirX = dx / dist;
+                const dirY = dy / dist;
+                // Chase player directly
+                bomb.vx += dirX * moveSpeed * 0.4;
+                bomb.vy += dirY * moveSpeed * 0.4;
+            }
+            
+            // Apply friction
+            bomb.vx *= 0.9;
+            bomb.vy *= 0.9;
+            
+            // Update position
+            bomb.x += bomb.vx;
+            bomb.y += bomb.vy;
+            
+            // Boundary collision
+            const radius = bomb.baseRadius;
+            if (bomb.x - radius < 0) {
+                bomb.x = radius;
+                bomb.vx = Math.abs(bomb.vx) * 0.8;
+            }
+            if (bomb.x + radius > canvas.width) {
+                bomb.x = canvas.width - radius;
+                bomb.vx = -Math.abs(bomb.vx) * 0.8;
+            }
+            if (bomb.y - radius < 0) {
+                bomb.y = radius;
+                bomb.vy = Math.abs(bomb.vy) * 0.8;
+            }
+            if (bomb.y + radius > canvas.height) {
+                bomb.y = canvas.height - radius;
+                bomb.vy = -Math.abs(bomb.vy) * 0.8;
+            }
+            
+            // Update squash and stretch based on velocity
+            const velocity = Math.sqrt(bomb.vx * bomb.vx + bomb.vy * bomb.vy);
+            if (velocity > 0.5) {
+                const angle = Math.atan2(bomb.vy, bomb.vx);
+                bomb.rotation = angle;
+                const velocityRatio = Math.min(velocity / (moveSpeed * 2), 1);
+                bomb.targetScaleX = 1 + 0.3 * velocityRatio;
+                bomb.targetScaleY = 1 - 0.2 * velocityRatio;
+            } else {
+                bomb.targetScaleX = 1;
+                bomb.targetScaleY = 1;
+            }
+            
+            bomb.scaleX += (bomb.targetScaleX - bomb.scaleX) * 0.1;
+            bomb.scaleY += (bomb.targetScaleY - bomb.scaleY) * 0.1;
+        }
+        
+        function drawBombs() {
+            aiBombs.forEach(bomb => {
+                if (!bomb.visible || bomb.dead) return;
+                
+                // Draw bomb with pulsing effect
+                const pulseScale = 1 + Math.sin(bomb.pulse * 10) * 0.1;
+                ctx.save();
+                ctx.translate(bomb.x, bomb.y);
+                ctx.scale(bomb.scaleX * pulseScale, bomb.scaleY * pulseScale);
+                ctx.rotate(bomb.rotation);
+                
+                // Draw bomb bubble with red/orange color
+                drawBubble(0, 0, 1, 1, 0, 1, bomb.color);
+                
+                // Draw warning symbol or inner glow
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.beginPath();
+                ctx.arc(0, 0, bomb.baseRadius * 0.3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
+            });
+        }
+        
+        // Target Break Challenge
+        function startTargetBreak() {
+            currentGameMode = 'target_break';
+            targets = [];
+            activeTargets = [];
+            targetTimer = 0;
+            targetTimeLimit = 0;
+            targetsBroken = 0;
+            playerDead = false;
+            deathParticles = [];
+            
+            // Reset player
+            if (localPlayer) {
+                localPlayer.x = canvas.width / 2;
+                localPlayer.y = canvas.height / 2;
+                localPlayer.vx = 0;
+                localPlayer.vy = 0;
+                localPlayer.visible = true;
+                localPlayer.dead = false;
+                localPlayer.health = 100;
+                localPlayer.maxHealth = 100;
+            }
+            
+            if (healthBar) {
+                healthBar.setHealth(100);
+            }
+            
+            // Spawn first target
+            spawnTargets();
+            
+            resumeGame();
+        }
+        
+        function getTargetCount() {
+            // Calculate how many targets should be active
+            // 1 target for 0-4 broken, 2 for 5-9, 3 for 10-14, etc.
+            return 1 + Math.floor(targetsBroken / 5);
+        }
+        
+        function spawnTargets() {
+            const targetCount = getTargetCount();
+            const margin = 100;
+            
+            // Clear existing targets
+            activeTargets = [];
+            
+            // Spawn the required number of targets
+            for (let i = 0; i < targetCount; i++) {
+                // Random timer between 2-5 seconds for each target
+                const timeLimit = 2000 + Math.random() * 3000; // 2000-5000ms
+                
+                // Random position (try to avoid overlapping)
+                let x, y;
+                let attempts = 0;
+                do {
+                    x = margin + Math.random() * (canvas.width - margin * 2);
+                    y = margin + Math.random() * (canvas.height - margin * 2);
+                    attempts++;
+                } while (attempts < 10 && activeTargets.some(t => {
+                    const dx = t.x - x;
+                    const dy = t.y - y;
+                    return Math.sqrt(dx * dx + dy * dy) < 100; // Minimum distance
+                }));
+                
+                activeTargets.push({
+                    id: 'target_' + Date.now() + '_' + i,
+                    x: x,
+                    y: y,
+                    radius: 30 + Math.random() * 20,
+                    color: `hsl(${Math.random() * 360}, 70%, 50%)`,
+                    pulse: 0,
+                    broken: false,
+                    timer: 0,
+                    timeLimit: timeLimit
+                });
+            }
+            
+            // Set global timer to the shortest time limit
+            targetTimeLimit = Math.min(...activeTargets.map(t => t.timeLimit));
+            targetTimer = 0;
+        }
+        
+        function updateTargetBreak(deltaTime) {
+            if (currentGameMode !== 'target_break' || playerDead) return;
+            
+            // If no targets exist, spawn them immediately
+            if (activeTargets.length === 0) {
+                spawnTargets();
+                return;
+            }
+            
+            // Check if all targets are broken
+            const allBroken = activeTargets.every(t => t.broken);
+            if (allBroken) {
+                // Wait a moment before spawning new targets
+                setTimeout(() => {
+                    if (currentGameMode === 'target_break' && !playerDead) {
+                        spawnTargets();
+                    }
+                }, 500);
+                return;
+            }
+            
+            // Update each target's timer and check for timeout
+            let anyTimeExpired = false;
+            for (let i = activeTargets.length - 1; i >= 0; i--) {
+                const target = activeTargets[i];
+                
+                if (target.broken) continue;
+                
+                // Update individual target timer
+                target.timer += deltaTime;
+                
+                // Check if this target's time ran out
+                if (target.timer >= target.timeLimit) {
+                    // Time's up for this target - game over
+                    target.broken = true;
+                    anyTimeExpired = true;
+                }
+                
+                // Update target pulse animation
+                target.pulse += deltaTime * 0.01;
+                
+                // Check collision with player
+                if (localPlayer && !playerDead && !target.broken) {
+                    const dx = target.x - localPlayer.x;
+                    const dy = target.y - localPlayer.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const collisionDist = target.radius + localPlayer.baseRadius;
+                    
+                    if (dist < collisionDist) {
+                        // Target broken!
+                        target.broken = true;
+                        targetsBroken++;
+                        
+                        // Check if all targets are now broken
+                        const allNowBroken = activeTargets.every(t => t.broken);
+                        if (allNowBroken) {
+                            // Spawn new targets after brief delay
+                            setTimeout(() => {
+                                if (currentGameMode === 'target_break' && !playerDead) {
+                                    spawnTargets();
+                                }
+                            }, 500);
+                        }
+                    }
+                }
+            }
+            
+            // If any target's time expired, game over
+            if (anyTimeExpired) {
+                if (healthBar) {
+                    healthBar.takeDamage(100); // Instant death
+                }
+                return;
+            }
+            
+            // Update global timer (for display purposes - use shortest remaining time)
+            const remainingTargets = activeTargets.filter(t => !t.broken);
+            if (remainingTargets.length > 0) {
+                targetTimeLimit = Math.min(...remainingTargets.map(t => t.timeLimit));
+                targetTimer = Math.min(...remainingTargets.map(t => t.timer));
+            }
+            
+            // Update death particles
+            updateDeathParticles();
+        }
+        
+        function drawTargets() {
+            // Draw all active targets
+            activeTargets.forEach(target => {
+                if (target.broken) return;
+                
+                const timeLeft = target.timeLimit - target.timer;
+                const timePercent = timeLeft / target.timeLimit;
+                
+                // Draw target with pulsing effect
+                ctx.save();
+                ctx.translate(target.x, target.y);
+                
+                // Outer ring (pulsing based on time left)
+                const pulseScale = 1 + Math.sin(target.pulse * 10) * 0.1;
+                ctx.scale(pulseScale, pulseScale);
+                
+                // Color based on time left (green -> yellow -> red)
+                let targetColor = target.color;
+                if (timePercent < 0.3) {
+                    // Red when time is running out
+                    targetColor = `hsl(${(timePercent * 300)}, 100%, 50%)`;
+                } else if (timePercent < 0.6) {
+                    // Yellow
+                    targetColor = `hsl(${60 - (timePercent - 0.3) * 200}, 100%, 50%)`;
+                }
+                
+                // Draw target circles
+                ctx.strokeStyle = targetColor;
+                ctx.lineWidth = 4;
+                
+                // Outer ring
+                ctx.beginPath();
+                ctx.arc(0, 0, target.radius, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Middle ring
+                ctx.beginPath();
+                ctx.arc(0, 0, target.radius * 0.7, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Inner circle
+                ctx.fillStyle = targetColor;
+                ctx.beginPath();
+                ctx.arc(0, 0, target.radius * 0.4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
+                
+                // Draw timer bar above target
+                const barWidth = target.radius * 2;
+                const barHeight = 6;
+                const barX = target.x - barWidth / 2;
+                const barY = target.y - target.radius - 15;
+                
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fillRect(barX, barY, barWidth, barHeight);
+                
+                ctx.fillStyle = timePercent < 0.3 ? 'rgba(255, 0, 0, 0.8)' : 
+                               timePercent < 0.6 ? 'rgba(255, 255, 0, 0.8)' : 
+                               'rgba(0, 255, 0, 0.8)';
+                ctx.fillRect(barX, barY, barWidth * timePercent, barHeight);
+            });
+        }
+        
         function triggerDeathEffect() {
             if (!localPlayer) return;
             
@@ -1995,7 +3564,7 @@
             }
             
             // Show death screen if in challenge mode
-            if (currentGameMode === 'spike_dodge') {
+            if (currentGameMode === 'spike_dodge' || currentGameMode === 'dodge_mode' || currentGameMode === 'target_break') {
                 setTimeout(() => {
                     showDeathScreen();
                 }, 1000);
@@ -2032,24 +3601,102 @@
         }
         
         function showDeathScreen() {
-            // Update spike dodge stats
-            const wasNewRecord = spikesDodged > playerRanking.spikeDodge.bestScore;
-            if (wasNewRecord) {
-                playerRanking.spikeDodge.bestScore = spikesDodged;
+            let wasNewRecord = false;
+            let scoreText = '';
+            let bestScoreText = '';
+            let retryFunction = '';
+            let exitFunction = '';
+            
+            // Update stats based on current game mode
+            if (currentGameMode === 'spike_dodge') {
+                wasNewRecord = spikesDodged > playerRanking.spikeDodge.bestScore;
+                if (wasNewRecord) {
+                    playerRanking.spikeDodge.bestScore = spikesDodged;
+                }
+                playerRanking.spikeDodge.totalPlayed++;
+                playerRanking.spikeDodge.totalSpikesDodged += spikesDodged;
+                playerRanking.spikeDodge.averageScore = Math.round(playerRanking.spikeDodge.totalSpikesDodged / playerRanking.spikeDodge.totalPlayed);
+                scoreText = `Spikes Dodged: <span id="scoreCount" style="color: #667eea; font-weight: 600;">${spikesDodged}</span>`;
+                bestScoreText = `Best Score: <span id="bestScoreDisplay" style="color: #ffd700; font-weight: 600;">${playerRanking.spikeDodge.bestScore}</span>`;
+                retryFunction = 'retrySpikeDodge()';
+                exitFunction = 'exitSpikeDodge()';
+            } else if (currentGameMode === 'dodge_mode') {
+                const survivalTime = Math.floor((Date.now() - dodgeModeStartTime) / 1000);
+                wasNewRecord = survivalTime > playerRanking.dodgeMode.bestTime;
+                if (wasNewRecord) {
+                    playerRanking.dodgeMode.bestTime = survivalTime;
+                }
+                playerRanking.dodgeMode.totalPlayed++;
+                playerRanking.dodgeMode.totalTimeSurvived += survivalTime;
+                scoreText = `Time Survived: <span id="scoreCount" style="color: #667eea; font-weight: 600;">${survivalTime}s</span>`;
+                bestScoreText = `Best Time: <span id="bestScoreDisplay" style="color: #ffd700; font-weight: 600;">${playerRanking.dodgeMode.bestTime}s</span>`;
+                retryFunction = 'retryDodgeMode()';
+                exitFunction = 'exitDodgeMode()';
+            } else if (currentGameMode === 'target_break') {
+                wasNewRecord = targetsBroken > playerRanking.targetBreak.bestScore;
+                if (wasNewRecord) {
+                    playerRanking.targetBreak.bestScore = targetsBroken;
+                    targetBreakBestScore = targetsBroken;
+                }
+                playerRanking.targetBreak.totalPlayed++;
+                playerRanking.targetBreak.totalTargetsBroken += targetsBroken;
+                scoreText = `Targets Broken: <span id="scoreCount" style="color: #667eea; font-weight: 600;">${targetsBroken}</span>`;
+                bestScoreText = `Best Score: <span id="bestScoreDisplay" style="color: #ffd700; font-weight: 600;">${playerRanking.targetBreak.bestScore}</span>`;
+                retryFunction = 'retryTargetBreak()';
+                exitFunction = 'exitTargetBreak()';
             }
-            playerRanking.spikeDodge.totalPlayed++;
-            playerRanking.spikeDodge.totalSpikesDodged += spikesDodged;
-            playerRanking.spikeDodge.averageScore = Math.round(playerRanking.spikeDodge.totalSpikesDodged / playerRanking.spikeDodge.totalPlayed);
+            
             saveRanking();
+            
+            // Award orbs and random unlocks
+            let orbsEarned = 0;
+            let randomUnlock = null;
+            
+            if (currentGameMode === 'spike_dodge') {
+                orbsEarned = Math.floor(spikesDodged / 10); // 1 orb per 10 spikes
+                if (Math.random() < 0.1) { // 10% chance for random unlock
+                    randomUnlock = unlockRandomColor();
+                }
+            } else if (currentGameMode === 'dodge_mode') {
+                const survivalTime = Math.floor((Date.now() - dodgeModeStartTime) / 1000);
+                orbsEarned = Math.floor(survivalTime / 5); // 1 orb per 5 seconds
+                if (Math.random() < 0.15) { // 15% chance for random unlock
+                    randomUnlock = unlockRandomColor();
+                }
+            } else if (currentGameMode === 'target_break') {
+                orbsEarned = Math.floor(targetsBroken / 5); // 1 orb per 5 targets
+                if (Math.random() < 0.12) { // 12% chance for random unlock
+                    randomUnlock = unlockRandomColor();
+                }
+            }
+            
+            if (orbsEarned > 0) {
+                addOrbs(orbsEarned);
+            }
             
             // Create death screen overlay
             const deathScreen = document.getElementById('deathScreen');
             if (deathScreen) {
                 deathScreen.style.display = 'block';
-                document.getElementById('spikesDodgedCount').textContent = spikesDodged;
+                const scoreCountEl = document.getElementById('scoreCount');
+                if (scoreCountEl) {
+                    if (currentGameMode === 'spike_dodge') {
+                        scoreCountEl.textContent = spikesDodged;
+                    } else if (currentGameMode === 'dodge_mode') {
+                        scoreCountEl.textContent = Math.floor((Date.now() - dodgeModeStartTime) / 1000) + 's';
+                    } else if (currentGameMode === 'target_break') {
+                        scoreCountEl.textContent = targetsBroken;
+                    }
+                }
                 const bestScoreEl = document.getElementById('bestScoreDisplay');
                 if (bestScoreEl) {
-                    bestScoreEl.textContent = playerRanking.spikeDodge.bestScore;
+                    if (currentGameMode === 'spike_dodge') {
+                        bestScoreEl.textContent = playerRanking.spikeDodge.bestScore;
+                    } else if (currentGameMode === 'dodge_mode') {
+                        bestScoreEl.textContent = playerRanking.dodgeMode.bestTime + 's';
+                    } else if (currentGameMode === 'target_break') {
+                        bestScoreEl.textContent = playerRanking.targetBreak.bestScore;
+                    }
                 }
                 const newRecordEl = document.getElementById('newRecordDisplay');
                 if (newRecordEl) {
@@ -2076,12 +3723,14 @@
                 `;
                 screen.innerHTML = `
                     <h2 style="font-size: 32px; margin-bottom: 20px;">Game Over!</h2>
-                    <div id="newRecordDisplay" style="font-size: 20px; color: #ffd700; margin-bottom: 15px; font-weight: 600; text-shadow: 0 0 10px rgba(255, 215, 0, 0.8); ${wasNewRecord ? '' : 'display: none;'}">
+                    <div id="newRecordDisplay" style="font-size: 24px; color: #ffd700; margin-bottom: 20px; font-weight: 600; text-shadow: 0 0 10px rgba(255, 215, 0, 0.8); text-align: center; width: 100%; ${wasNewRecord ? '' : 'display: none;'}">
                         🏆 NEW RECORD! 🏆
                     </div>
-                    <p style="font-size: 18px; margin-bottom: 10px;">Spikes Dodged: <span id="spikesDodgedCount" style="color: #667eea; font-weight: 600;">${spikesDodged}</span></p>
-                    <p style="font-size: 14px; color: #aaa; margin-bottom: 30px;">Best Score: <span id="bestScoreDisplay" style="color: #ffd700; font-weight: 600;">${playerRanking.spikeDodge.bestScore}</span></p>
-                    <button onclick="retrySpikeDodge()" style="
+                    <div id="orbRewardDisplay" style="font-size: 18px; color: #ffd700; margin-bottom: 10px; font-weight: 600; ${orbsEarned > 0 ? '' : 'display: none;'}">+${orbsEarned} Orbs Earned! 💎</div>
+                    <div id="unlockRewardDisplay" style="font-size: 18px; color: #00ff88; margin-bottom: 10px; font-weight: 600; ${randomUnlock ? '' : 'display: none;'}">${randomUnlock ? `🎉 Unlocked: ${randomUnlock.name}!` : ''}</div>
+                    <p style="font-size: 18px; margin-bottom: 10px; text-align: center;">${scoreText}</p>
+                    <p style="font-size: 14px; color: #aaa; margin-bottom: 30px; text-align: center;">${bestScoreText}</p>
+                    <button onclick="${retryFunction}" style="
                         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                         color: white;
                         border: none;
@@ -2092,7 +3741,7 @@
                         cursor: pointer;
                         margin: 10px;
                     ">Try Again</button>
-                    <button onclick="exitSpikeDodge()" style="
+                    <button onclick="${exitFunction}" style="
                         background: rgba(100, 100, 100, 0.5);
                         color: white;
                         border: none;
@@ -2196,6 +3845,152 @@
             }
             
             // Go back to lobby
+            goBackToLobby();
+        }
+        
+        // AI Fight Challenge retry/exit
+        function retryDodgeMode() {
+            const deathScreen = document.getElementById('deathScreen');
+            if (deathScreen) {
+                deathScreen.style.display = 'none';
+            }
+            playerDead = false;
+            deathParticles = [];
+            aiBombs = [];
+            
+            if (localPlayer) {
+                localPlayer.visible = true;
+                localPlayer.dead = false;
+                localPlayer.health = 100;
+                localPlayer.maxHealth = 100;
+                localPlayer.x = canvas.width / 2;
+                localPlayer.y = canvas.height / 2;
+                localPlayer.vx = 0;
+                localPlayer.vy = 0;
+            }
+            
+            if (healthBar) {
+                healthBar.setHealth(100, false);
+            }
+            
+            currentGameMode = 'dodge_mode';
+            dodgeModeStartTime = Date.now();
+            lastBombSpawnTime = Date.now();
+            spawnBomb();
+            
+            const menuWidget = document.getElementById('menuWidget');
+            if (menuWidget && menuWidget.classList.contains('expanded')) {
+                menuWidget.classList.remove('expanded');
+                menuWidget.classList.add('collapsed');
+                menuVisible = false;
+            }
+            
+            setTimeout(() => {
+                playerDead = false;
+                if (localPlayer) {
+                    localPlayer.dead = false;
+                    localPlayer.visible = true;
+                }
+            }, 10);
+        }
+        
+        function exitDodgeMode() {
+            const deathScreen = document.getElementById('deathScreen');
+            if (deathScreen) {
+                deathScreen.style.display = 'none';
+            }
+            currentGameMode = null;
+            aiBombs = [];
+            playerDead = false;
+            deathParticles = [];
+            
+            if (localPlayer) {
+                localPlayer.visible = true;
+                localPlayer.x = canvas.width / 2;
+                localPlayer.y = canvas.height / 2;
+                localPlayer.vx = 0;
+                localPlayer.vy = 0;
+            }
+            
+            if (healthBar) {
+                healthBar.setHealth(100);
+            }
+            
+            goBackToLobby();
+        }
+        
+        // Target Break Challenge retry/exit
+        function retryTargetBreak() {
+            const deathScreen = document.getElementById('deathScreen');
+            if (deathScreen) {
+                deathScreen.style.display = 'none';
+            }
+            playerDead = false;
+            deathParticles = [];
+            targets = [];
+            currentTarget = null;
+            targetTimer = 0;
+            targetTimeLimit = 0;
+            targetsBroken = 0;
+            
+            if (localPlayer) {
+                localPlayer.visible = true;
+                localPlayer.dead = false;
+                localPlayer.health = 100;
+                localPlayer.maxHealth = 100;
+                localPlayer.x = canvas.width / 2;
+                localPlayer.y = canvas.height / 2;
+                localPlayer.vx = 0;
+                localPlayer.vy = 0;
+            }
+            
+            if (healthBar) {
+                healthBar.setHealth(100, false);
+            }
+            
+            currentGameMode = 'target_break';
+            spawnTarget();
+            
+            const menuWidget = document.getElementById('menuWidget');
+            if (menuWidget && menuWidget.classList.contains('expanded')) {
+                menuWidget.classList.remove('expanded');
+                menuWidget.classList.add('collapsed');
+                menuVisible = false;
+            }
+            
+            setTimeout(() => {
+                playerDead = false;
+                if (localPlayer) {
+                    localPlayer.dead = false;
+                    localPlayer.visible = true;
+                }
+            }, 10);
+        }
+        
+        function exitTargetBreak() {
+            const deathScreen = document.getElementById('deathScreen');
+            if (deathScreen) {
+                deathScreen.style.display = 'none';
+            }
+            currentGameMode = null;
+            targets = [];
+            currentTarget = null;
+            playerDead = false;
+            deathParticles = [];
+            targetsBroken = 0;
+            
+            if (localPlayer) {
+                localPlayer.visible = true;
+                localPlayer.x = canvas.width / 2;
+                localPlayer.y = canvas.height / 2;
+                localPlayer.vx = 0;
+                localPlayer.vy = 0;
+            }
+            
+            if (healthBar) {
+                healthBar.setHealth(100);
+            }
+            
             goBackToLobby();
         }
         
@@ -2479,6 +4274,87 @@
             document.getElementById('controlsScreen').classList.add('active');
         }
         
+        function showShopMenu() {
+            hideAllScreens();
+            document.getElementById('shopScreen').classList.add('active');
+            updateShopDisplay();
+            updateOrbDisplay();
+        }
+        
+        function updateShopDisplay() {
+            const container = document.getElementById('shopItemsContainer');
+            if (!container) return;
+            
+            container.innerHTML = availableColors.map(color => {
+                const isUnlocked = unlockedColors.includes(color.id);
+                const canAfford = playerCurrency.orbs >= color.price;
+                
+                return `
+                    <div style="background: rgba(102, 126, 234, 0.1); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid ${isUnlocked ? 'rgba(0, 255, 0, 0.3)' : 'rgba(102, 126, 234, 0.3)'};">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                            <div style="width: 40px; height: 40px; border-radius: 50%; background: ${color.hex}; border: 2px solid #fff;"></div>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; color: #fff; margin-bottom: 3px;">${color.name}</div>
+                                ${isUnlocked ? 
+                                    '<div style="color: #00ff88; font-size: 11px;">✓ Unlocked</div>' : 
+                                    `<div style="color: #ffd700; font-size: 11px;">Price: ${color.price} Orbs</div>`
+                                }
+                            </div>
+                        </div>
+                        ${!isUnlocked ? (
+                            canAfford ? 
+                                `<button class="menu-button" onclick="purchaseColor('${color.id}')" style="width: 100%; padding: 8px; font-size: 12px;">Buy</button>` :
+                                `<button class="menu-button" style="width: 100%; padding: 8px; font-size: 12px; opacity: 0.5; cursor: not-allowed;" disabled>Not Enough Orbs</button>`
+                        ) : (
+                            selectedColorId === color.id ?
+                                '<div style="text-align: center; color: #00ff88; font-size: 11px; padding: 5px;">✓ Selected</div>' :
+                                `<button class="menu-button" onclick="selectColor('${color.id}')" style="width: 100%; padding: 8px; font-size: 12px;">Select</button>`
+                        )}
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function purchaseColor(colorId) {
+            const color = availableColors.find(c => c.id === colorId);
+            if (!color) return;
+            
+            if (unlockedColors.includes(colorId)) {
+                selectColor(colorId);
+                return;
+            }
+            
+            if (spendOrbs(color.price)) {
+                unlockColor(colorId);
+                updateShopDisplay();
+                updateCustomizeDisplay();
+                alert(`Unlocked ${color.name}!`);
+            } else {
+                alert('Not enough orbs!');
+            }
+        }
+        
+        function selectColor(colorId) {
+            if (unlockedColors.includes(colorId)) {
+                selectedColorId = colorId;
+                saveUnlockedColors();
+                
+                const color = availableColors.find(c => c.id === colorId);
+                if (color && localPlayer) {
+                    localPlayer.color = hexToHsl(color.hex);
+                    // Save to localStorage
+                    try {
+                        localStorage.setItem('playerColor', color.hex);
+                    } catch (e) {
+                        console.warn('Could not save color:', e);
+                    }
+                }
+                
+                updateShopDisplay();
+                updateCustomizeDisplay();
+            }
+        }
+        
         function showCustomizeMenu() {
             hideAllScreens();
             document.getElementById('customizeScreen').classList.add('active');
@@ -2489,6 +4365,36 @@
             }
             // Update image preview
             updateImagePreview();
+            updateCustomizeDisplay();
+        }
+        
+        function updateCustomizeDisplay() {
+            const container = document.getElementById('colorSelectionContainer');
+            if (!container) return;
+            
+            // Only show unlocked colors
+            const unlockedColorList = availableColors.filter(color => unlockedColors.includes(color.id));
+            
+            container.innerHTML = unlockedColorList.map(color => {
+                const isSelected = selectedColorId === color.id;
+                
+                return `
+                    <div style="
+                        position: relative;
+                        width: 60px;
+                        height: 60px;
+                        border-radius: 50%;
+                        background: ${color.hex};
+                        border: 3px solid ${isSelected ? '#ffd700' : '#fff'};
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    " onclick="selectColor('${color.id}')" title="${color.name}">
+                        ${isSelected ? '<div style="font-size: 20px; color: #ffd700;">✓</div>' : ''}
+                    </div>
+                `;
+            }).join('');
         }
         
         function updateImagePreview() {
@@ -2524,9 +4430,27 @@
             toggleMenu();
         }
         
-        function goToShangkoStudio() {
-            // Navigate to ShangkoStudio homepage in the current tab
-            window.location.href = 'https://www.shangkostudio.com/';
+        function goToDiscord() {
+            // Open Discord link in external browser
+            if (window.electronAPI && window.electronAPI.openExternal) {
+                window.electronAPI.openExternal('https://discord.gg/56kNp6JKV7');
+            } else {
+                // Fallback for browser - open in new tab
+                window.open('https://discord.gg/56kNp6JKV7', '_blank');
+            }
+        }
+        
+        function quitApp() {
+            // Quit the Electron application
+            if (window.electronAPI && window.electronAPI.quit) {
+                window.electronAPI.quit();
+            } else {
+                // Fallback if not running in Electron (for testing in browser)
+                if (confirm('Quit the application?')) {
+                    // In browser, we can't actually quit, but we can close the window
+                    window.close();
+                }
+            }
         }
         
         // Color picker functionality
@@ -2587,19 +4511,14 @@
         
         function loadSavedColor() {
             try {
-                const savedColor = localStorage.getItem('playerColor');
-                if (savedColor) {
-                    const colorPicker = document.getElementById('colorPicker');
-                    if (colorPicker) {
-                        colorPicker.value = savedColor;
-                        if (localPlayer) {
-                            localPlayer.color = hexToHsl(savedColor);
-                            if (localPlayerId) {
-                                players.set(localPlayerId, localPlayer);
-                            }
-                        }
+                // Use selected color from unlockable system
+                const color = availableColors.find(c => c.id === selectedColorId);
+                if (color && localPlayer) {
+                    localPlayer.color = hexToHsl(color.hex);
+                    if (localPlayerId) {
+                        players.set(localPlayerId, localPlayer);
                     }
-                    return savedColor;
+                    return color.hex;
                 }
             } catch (e) {
                 console.warn('Could not load color from localStorage:', e);
@@ -2734,6 +4653,10 @@
                             if (matchInProgress && (queueMode === '1v1' || queueMode === '2v2')) {
                                 setTimeout(() => checkMatchVictory(), 500);
                             }
+                            // Check for FreeForAll winner
+                            if (freeForAllInProgress && currentGameMode === 'freeforall') {
+                                setTimeout(() => checkFreeForAllWinner(), 500);
+                            }
                         } else if (player2Recoil > player1Recoil) {
                             // Player 2 takes damage
                             player2.health = Math.max(0, player2.health - 10);
@@ -2753,6 +4676,10 @@
                             // Check for match victory
                             if (matchInProgress && (queueMode === '1v1' || queueMode === '2v2')) {
                                 setTimeout(() => checkMatchVictory(), 500);
+                            }
+                            // Check for FreeForAll winner
+                            if (freeForAllInProgress && currentGameMode === 'freeforall') {
+                                setTimeout(() => checkFreeForAllWinner(), 500);
                             }
                         }
                     }
@@ -3045,9 +4972,64 @@
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
             
-            // Draw game mode elements (spikes, etc.)
+            // Draw game mode elements (spikes, AI bots, targets, etc.)
             if (currentGameMode === 'spike_dodge') {
                 drawSpikes();
+            } else if (currentGameMode === 'dodge_mode') {
+                drawBombs();
+            } else if (currentGameMode === 'target_break') {
+                drawTargets();
+            } else if (currentGameMode === 'training_1v1' || currentGameMode === 'training_2v2') {
+                drawTrainingAI();
+            }
+            
+            // Draw challenge mode UI
+            if (currentGameMode === 'spike_dodge' && !playerDead) {
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 24px system-ui';
+                ctx.textAlign = 'left';
+                ctx.fillText(`Spikes Dodged: ${spikesDodged}`, 20, 40);
+            } else if (currentGameMode === 'dodge_mode' && !playerDead) {
+                const survivalTime = Math.floor((Date.now() - dodgeModeStartTime) / 1000);
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 24px system-ui';
+                ctx.textAlign = 'left';
+                ctx.fillText(`Time: ${survivalTime}s`, 20, 40);
+                ctx.fillText(`Bombs: ${aiBombs.length}`, 20, 70);
+            } else if (currentGameMode === 'freeforall' && !playerDead) {
+                const survivalTime = Math.floor((Date.now() - freeForAllStartTime) / 1000);
+                const aliveCount = Array.from(players.values()).filter(p => !p.dead && p.health > 0).length;
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 24px system-ui';
+                ctx.textAlign = 'left';
+                ctx.fillText(`FreeForAll - Time: ${survivalTime}s`, 20, 40);
+                ctx.fillText(`Players Alive: ${aliveCount}`, 20, 70);
+            } else if ((currentGameMode === 'training_1v1' || currentGameMode === 'training_2v2') && !playerDead) {
+                const aliveAICount = trainingAIBots.filter(ai => !ai.dead).length;
+                const deadAICount = trainingAIBots.filter(ai => ai.dead).length;
+                const respawnTimeLeft = deadAICount > 0 && aliveAICount === 0 ? 
+                    Math.ceil((trainingRespawnDelay - trainingRespawnTimer) / 1000) : 0;
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 24px system-ui';
+                ctx.textAlign = 'left';
+                ctx.fillText(`Training Mode: ${trainingMode}`, 20, 40);
+                ctx.fillText(`AI Bots: ${aliveAICount}`, 20, 70);
+                if (respawnTimeLeft > 0) {
+                    ctx.fillStyle = '#ffaa00';
+                    ctx.fillText(`Respawn in: ${respawnTimeLeft}s`, 20, 100);
+                }
+            } else if (currentGameMode === 'target_break' && !playerDead && activeTargets.length > 0) {
+                const remainingTargets = activeTargets.filter(t => !t.broken);
+                const shortestTimeLeft = remainingTargets.length > 0 ? 
+                    Math.min(...remainingTargets.map(t => Math.max(0, t.timeLimit - t.timer))) : 0;
+                const timeLeftSeconds = (shortestTimeLeft / 1000).toFixed(1);
+                ctx.fillStyle = shortestTimeLeft < 1000 ? '#ff0000' : '#fff';
+                ctx.font = 'bold 24px system-ui';
+                ctx.textAlign = 'left';
+                ctx.fillText(`Targets Broken: ${targetsBroken}`, 20, 40);
+                ctx.fillText(`Active Targets: ${remainingTargets.length}`, 20, 70);
+                ctx.fillText(`Time Left: ${timeLeftSeconds}s`, 20, 100);
             }
             
             // Draw death particles
@@ -3275,6 +5257,15 @@
             // Update game modes
             if (currentGameMode === 'spike_dodge') {
                 updateSpikeDodge(deltaTime);
+            } else if (currentGameMode === 'dodge_mode') {
+                updateDodgeMode(deltaTime);
+            } else if (currentGameMode === 'target_break') {
+                updateTargetBreak(deltaTime);
+            } else if (currentGameMode === 'freeforall') {
+                // Check for FreeForAll winner every frame
+                checkFreeForAllWinner();
+            } else if (currentGameMode === 'training_1v1' || currentGameMode === 'training_2v2') {
+                updateTrainingMode(deltaTime);
             }
             
             draw(time);
@@ -3325,10 +5316,10 @@
                 
                 localPlayerId = id;
                 localPlayer = createPlayer(id, true);
-                // Apply color from color picker
-                const colorPicker = document.getElementById('colorPicker');
-                if (colorPicker && localPlayer) {
-                    localPlayer.color = hexToHsl(colorPicker.value);
+                // Apply color from unlockable system
+                const color = availableColors.find(c => c.id === selectedColorId);
+                if (color && localPlayer) {
+                    localPlayer.color = hexToHsl(color.hex);
                 }
                 players.set(id, localPlayer);
                 
@@ -3423,7 +5414,10 @@
                     // Apply color from color picker
                     const colorPicker = document.getElementById('colorPicker');
                     if (colorPicker && localPlayer) {
-                        localPlayer.color = hexToHsl(colorPicker.value);
+                        const selectedColor = availableColors.find(c => c.id === selectedColorId);
+                        if (selectedColor) {
+                            localPlayer.color = hexToHsl(selectedColor.hex);
+                        }
                     }
                     players.set(id, localPlayer);
                     
@@ -3471,7 +5465,10 @@
                     
                     const colorPicker = document.getElementById('colorPicker');
                     if (colorPicker && localPlayer) {
-                        localPlayer.color = hexToHsl(colorPicker.value);
+                        const selectedColor = availableColors.find(c => c.id === selectedColorId);
+                        if (selectedColor) {
+                            localPlayer.color = hexToHsl(selectedColor.hex);
+                        }
                     }
                     players.set('local', localPlayer);
                     
@@ -3515,7 +5512,10 @@
                         
                         const colorPicker = document.getElementById('colorPicker');
                         if (colorPicker && localPlayer) {
-                            localPlayer.color = hexToHsl(colorPicker.value);
+                            const selectedColor = availableColors.find(c => c.id === selectedColorId);
+                        if (selectedColor) {
+                            localPlayer.color = hexToHsl(selectedColor.hex);
+                        }
                         }
                         players.set('local', localPlayer);
                         
@@ -3924,6 +5924,10 @@
                     if (matchInProgress && (queueMode === '1v1' || queueMode === '2v2')) {
                         setTimeout(() => checkMatchVictory(), 500);
                     }
+                    // Check for FreeForAll winner
+                    if (freeForAllInProgress && currentGameMode === 'freeforall') {
+                        setTimeout(() => checkFreeForAllWinner(), 500);
+                    }
                 }
             }
             
@@ -3963,23 +5967,10 @@
         // Store health bar globally for scaling
         window.healthBar = healthBar;
         
-        // Setup color picker first (before creating player)
-        const colorPicker = document.getElementById('colorPicker');
-        if (colorPicker) {
-            // Load saved color from localStorage
-            try {
-                const savedColor = localStorage.getItem('playerColor');
-                if (savedColor) {
-                    colorPicker.value = savedColor;
-                }
-            } catch (e) {
-                console.warn('Could not load color from localStorage:', e);
-            }
-            
-            // Update color when picker changes
-            colorPicker.addEventListener('input', (e) => {
-                updatePlayerColor(e.target.value);
-            });
+        // Color is now handled by unlockable system - initialize selected color
+        const initColor = availableColors.find(c => c.id === selectedColorId);
+        if (initColor && localPlayer) {
+            localPlayer.color = hexToHsl(initColor.hex);
         }
         
         // Setup name input

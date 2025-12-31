@@ -8,7 +8,10 @@
     "build": "electron-builder",
     "build-win": "electron-builder --win",
     "build-mac": "electron-builder --mac",
-    "build-linux": "electron-builder --linux"
+    "build-linux": "electron-builder --linux",
+    "build-steam": "electron-builder --win --x64 --publish never",
+    "prepare-steam": "node create-steam-files.js",
+    "test-steam": "electron . --steam-test"
   },
   "keywords": [
     "game",
@@ -30,7 +33,9 @@
       "index.html",
       "main.js",
       "preload.js",
-      "package.json"
+      "package.json",
+      "steam-config.json",
+      "node_modules/steamworks.js/**/*"
     ],
     "win": {
       "target": [
@@ -54,7 +59,14 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
+    },
+    "extraMetadata": {
+      "main": "main.js"
     }
+  },
+  "dependencies": {
+    "steamworks.js": "^1.4.1"
   }
 }
+
 
