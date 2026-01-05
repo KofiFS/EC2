@@ -529,7 +529,7 @@
         .version-info {
             position: absolute;
             bottom: 20px;
-            right: 20px;
+            left: 20px;
             z-index: 10;
             color: rgba(255, 255, 255, 0.5);
             font-size: 12px;
@@ -544,7 +544,6 @@
         <div class="menu-content">
             <!-- Main Menu Screen -->
             <div class="menu-screen active" id="mainMenuScreen">
-                <button class="menu-button" onclick="showVSMenu()">VS</button>
                 <button class="menu-button" onclick="showMultiplayerMenu()">Multiplayer</button>
                 <button class="menu-button" onclick="showTrainingMenu()">Training</button>
                 <button class="menu-button" id="challengesButton" onclick="showChallengesMenu()" style="display: none;">Challenges</button>
@@ -552,6 +551,7 @@
                 <button class="menu-button" onclick="showShopMenu()">Shop</button>
                 <button class="menu-button" onclick="showControlsMenu()">Controls</button>
                 <button class="menu-button" onclick="showCustomizeMenu()">Customize</button>
+                <button class="menu-button" onclick="showSettingsMenu()">Settings</button>
                 <button class="menu-button" onclick="goToDiscord()">Discord</button>
                 <button class="menu-button" onclick="quitApp()">Quit</button>
             </div>
@@ -567,9 +567,39 @@
             <!-- Training Menu Screen -->
             <div class="menu-screen" id="trainingMenuScreen">
                 <h3>Training</h3>
-                <button class="menu-button" onclick="startTraining('1v1')">1v1 Training</button>
-                <button class="menu-button" onclick="startTraining('2v2')">2v2 Training</button>
+                <button class="menu-button" onclick="showTrainingSettings()">Training Settings</button>
                 <button class="menu-button" onclick="showMainMenu()">Back</button>
+            </div>
+            
+            <!-- Training Settings Screen -->
+            <div class="menu-screen" id="trainingSettingsScreen">
+                <h3>Training Settings</h3>
+                <div style="margin: 20px 0;">
+                    <label style="display: block; margin-bottom: 10px; color: #fff;">
+                        Number of AIs: <span id="aiCountDisplay">2</span>
+                    </label>
+                    <input type="range" id="aiCountSlider" min="1" max="10" value="2" 
+                           style="width: 100%; margin-bottom: 20px;"
+                           oninput="updateTrainingSettings()">
+                </div>
+                <div style="margin: 20px 0;">
+                    <label style="display: flex; align-items: center; color: #fff; margin-bottom: 20px;">
+                        <input type="checkbox" id="friendlyFireCheckbox" 
+                               style="margin-right: 10px; width: 20px; height: 20px;"
+                               onchange="updateTrainingSettings()">
+                        Friendly Fire
+                    </label>
+                </div>
+                <div style="margin: 20px 0;">
+                    <label style="display: block; margin-bottom: 10px; color: #fff;">
+                        AI Speed: <span id="aiSpeedDisplay">60%</span>
+                    </label>
+                    <input type="range" id="aiSpeedSlider" min="30" max="100" value="60" step="10"
+                           style="width: 100%; margin-bottom: 20px;"
+                           oninput="updateTrainingSettings()">
+                </div>
+                <button class="menu-button" onclick="startTrainingWithSettings()">Start Training</button>
+                <button class="menu-button" onclick="showTrainingMenu()">Back</button>
             </div>
             
             <!-- Join Game Screen -->
@@ -616,16 +646,98 @@
                         <!-- Colors will be populated by JavaScript -->
                     </div>
                 </div>
-                <div style="margin-top: 15px;">
-                    <label style="display: block; color: #aaa; font-size: 12px; margin-bottom: 5px;">Actor Image</label>
-                    <input type="file" id="actorImageInput" accept="image/*" style="display: none;">
-                    <button class="menu-button" onclick="document.getElementById('actorImageInput').click()" style="margin: 0;">Choose Image</button>
-                    <div id="imagePreview" style="margin-top: 10px; text-align: center; display: none;">
-                        <img id="previewImg" style="max-width: 60px; max-height: 60px; border-radius: 4px; border: 2px solid #667eea;">
-                        <button class="menu-button" onclick="clearImage()" style="margin-top: 5px; padding: 5px 10px; font-size: 12px;">Remove Image</button>
+                <div style="margin-bottom: 15px;">
+                    <h4 style="color: #fff; font-size: 14px; margin-bottom: 10px;">Aura</h4>
+                    <div id="auraSelectionContainer" style="display: grid; grid-template-columns: repeat(3, 60px); gap: 10px; max-height: 300px; overflow-y: auto; overflow-x: hidden; padding-right: 5px;" class="custom-scrollbar">
+                        <!-- Auras will be populated by JavaScript -->
+                    </div>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <h4 style="color: #fff; font-size: 14px; margin-bottom: 10px;">Particle Effects</h4>
+                    <div id="particleSelectionContainer" style="display: grid; grid-template-columns: repeat(3, 60px); gap: 10px; max-height: 300px; overflow-y: auto; overflow-x: hidden; padding-right: 5px;" class="custom-scrollbar">
+                        <!-- Particles will be populated by JavaScript -->
                     </div>
                 </div>
                 <button class="menu-button" onclick="showMainMenu()">Back</button>
+            </div>
+            
+            <!-- Settings Screen -->
+            <div class="menu-screen" id="settingsScreen">
+                <h3>Settings</h3>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; color: #fff; font-size: 14px; margin-bottom: 8px; font-weight: 600;">Resolution</label>
+                    <select id="resolutionSelect" class="menu-input" style="width: 100%; padding: 8px; background: rgba(102, 126, 234, 0.2); border: 1px solid rgba(102, 126, 234, 0.5); border-radius: 4px; color: #fff; font-size: 14px;">
+                        <option value="1280x720">1280 x 720</option>
+                        <option value="1920x1080" selected>1920 x 1080 (Recommended)</option>
+                        <option value="2560x1440">2560 x 1440</option>
+                        <option value="3840x2160">3840 x 2160 (4K)</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; color: #fff; font-size: 14px; margin-bottom: 8px; font-weight: 600;">Frame Rate Limit</label>
+                    <select id="fpsSelect" class="menu-input" style="width: 100%; padding: 8px; background: rgba(102, 126, 234, 0.2); border: 1px solid rgba(102, 126, 234, 0.5); border-radius: 4px; color: #fff; font-size: 14px;">
+                        <option value="30">30 FPS</option>
+                        <option value="60" selected>60 FPS (Recommended)</option>
+                        <option value="120">120 FPS</option>
+                        <option value="144">144 FPS</option>
+                        <option value="240">240 FPS</option>
+                        <option value="0">Unlimited</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; color: #fff; font-size: 14px; margin-bottom: 8px; font-weight: 600;">Graphics Quality</label>
+                    <select id="graphicsSelect" class="menu-input" style="width: 100%; padding: 8px; background: rgba(102, 126, 234, 0.2); border: 1px solid rgba(102, 126, 234, 0.5); border-radius: 4px; color: #fff; font-size: 14px;">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium (Recommended)</option>
+                        <option value="high">High</option>
+                        <option value="ultra">Ultra</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; color: #fff; font-size: 14px; margin-bottom: 8px; font-weight: 600;">Master Volume</label>
+                    <input type="range" id="volumeSlider" min="0" max="100" value="100" style="width: 100%; margin-bottom: 5px;">
+                    <div style="display: flex; justify-content: space-between; color: #aaa; font-size: 12px;">
+                        <span>0%</span>
+                        <span id="volumeDisplay">100%</span>
+                        <span>100%</span>
+                    </div>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; color: #fff; font-size: 14px; margin-bottom: 8px; font-weight: 600;">Show FPS Counter</label>
+                    <input type="checkbox" id="showFPSCheckbox" style="width: 20px; height: 20px; cursor: pointer;">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; color: #fff; font-size: 14px; margin-bottom: 8px; font-weight: 600;">VSync</label>
+                    <input type="checkbox" id="vsyncCheckbox" checked style="width: 20px; height: 20px; cursor: pointer;">
+                </div>
+                <div style="margin-top: 20px; display: flex; gap: 10px;">
+                    <button class="menu-button" onclick="applySettings()" style="flex: 1;">Apply Settings</button>
+                    <button class="menu-button" onclick="resetSettings()" style="flex: 1;">Reset to Default</button>
+                </div>
+                <button class="menu-button" onclick="showMainMenu()" style="margin-top: 15px;">Back</button>
+            </div>
+            
+            <!-- Shop Screen -->
+            <div class="menu-screen" id="shopScreen">
+                <h3>Shop</h3>
+                <div style="margin-bottom: 15px; display: flex; gap: 15px; justify-content: center; align-items: center;">
+                    <div style="background: rgba(102, 126, 234, 0.2); padding: 10px 15px; border-radius: 6px; border: 1px solid rgba(102, 126, 234, 0.5);">
+                        <div style="color: #aaa; font-size: 11px; margin-bottom: 3px;">Orbs</div>
+                        <div id="orbDisplay" style="color: #ffd700; font-size: 18px; font-weight: 600;">0</div>
+                    </div>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <button class="menu-button" onclick="showPurchaseOrbsMenu()" style="width: 100%; padding: 12px; font-size: 14px; background: rgba(255, 215, 0, 0.2); border: 2px solid #ffd700;">Add Orbs</button>
+                </div>
+                <div style="margin-bottom: 15px; display: flex; gap: 10px; justify-content: center;">
+                    <button class="menu-button" id="shopCategoryColors" onclick="switchShopCategory('colors')" style="padding: 8px 15px; font-size: 12px; background: rgba(102, 126, 234, 0.3);">Colors</button>
+                    <button class="menu-button" id="shopCategoryAuras" onclick="switchShopCategory('auras')" style="padding: 8px 15px; font-size: 12px;">Auras</button>
+                    <button class="menu-button" id="shopCategoryParticles" onclick="switchShopCategory('particles')" style="padding: 8px 15px; font-size: 12px;">Particles</button>
+                </div>
+                <div id="shopItemsContainer" style="max-height: 400px; overflow-y: auto; overflow-x: hidden; padding-right: 5px;" class="custom-scrollbar">
+                    <!-- Shop items will be populated by JavaScript -->
+                </div>
+                <button class="menu-button" onclick="showMainMenu()" style="margin-top: 15px;">Back</button>
             </div>
             
             <!-- VS Menu Screen -->
@@ -711,9 +823,27 @@
         let oceanBackground = null;
         
         // Base resolution for the game (maintains consistent game logic)
-        const BASE_WIDTH = 1920;
-        const BASE_HEIGHT = 1080;
-        const BASE_ASPECT_RATIO = BASE_WIDTH / BASE_HEIGHT;
+        let BASE_WIDTH = 1920;
+        let BASE_HEIGHT = 1080;
+        let BASE_ASPECT_RATIO = BASE_WIDTH / BASE_HEIGHT;
+        
+        // Game settings
+        let gameSettings = {
+            resolution: '1920x1080',
+            fpsLimit: 60,
+            graphicsQuality: 'medium',
+            masterVolume: 100,
+            showFPS: false,
+            vsync: true
+        };
+        
+        // FPS limiting
+        let targetFPS = 60;
+        let frameInterval = 1000 / targetFPS;
+        let lastFrameTime = 0;
+        let fpsCounter = 0;
+        let fpsTime = 0;
+        let currentFPS = 0;
         
         // Global scale factor for UI elements
         let currentScale = 1;
@@ -895,7 +1025,7 @@
             const versionInfo = document.getElementById('versionInfo');
             if (versionInfo) {
                 versionInfo.style.fontSize = (12 * currentScale) + 'px';
-                versionInfo.style.right = (canvasOffsetX + 20 * currentScale) + 'px';
+                versionInfo.style.left = (canvasOffsetX + 20 * currentScale) + 'px';
                 versionInfo.style.bottom = (canvasOffsetY + 20 * currentScale) + 'px';
             }
         }
@@ -970,31 +1100,145 @@
             orbs: 0
         };
         
-        // Available colors (all unlockable)
+        // Available colors (all unlockable) - 50 colors with tiered pricing
         const availableColors = [
             { id: 'default', name: 'Default Blue', hex: '#3b82f6', price: 0, unlocked: true }, // Free default
-            { id: 'red', name: 'Red', hex: '#ef4444', price: 50 },
-            { id: 'green', name: 'Green', hex: '#10b981', price: 50 },
-            { id: 'yellow', name: 'Yellow', hex: '#f59e0b', price: 50 },
-            { id: 'purple', name: 'Purple', hex: '#8b5cf6', price: 50 },
-            { id: 'pink', name: 'Pink', hex: '#ec4899', price: 75 },
-            { id: 'cyan', name: 'Cyan', hex: '#06b6d4', price: 75 },
-            { id: 'orange', name: 'Orange', hex: '#f97316', price: 75 },
-            { id: 'lime', name: 'Lime', hex: '#84cc16', price: 75 },
-            { id: 'indigo', name: 'Indigo', hex: '#6366f1', price: 100 },
-            { id: 'teal', name: 'Teal', hex: '#14b8a6', price: 100 },
-            { id: 'rose', name: 'Rose', hex: '#f43f5e', price: 100 },
-            { id: 'amber', name: 'Amber', hex: '#fbbf24', price: 100 },
-            { id: 'emerald', name: 'Emerald', hex: '#34d399', price: 150 },
-            { id: 'violet', name: 'Violet', hex: '#a78bfa', price: 150 },
-            { id: 'sky', name: 'Sky', hex: '#38bdf8', price: 150 },
-            { id: 'gold', name: 'Gold', hex: '#ffd700', price: 200 },
-            { id: 'silver', name: 'Silver', hex: '#c0c0c0', price: 200 },
-            { id: 'rainbow', name: 'Rainbow', hex: '#ff0080', price: 500 }
+            // Common tier (150-300 orbs)
+            { id: 'red', name: 'Red', hex: '#ef4444', price: 150 },
+            { id: 'green', name: 'Green', hex: '#10b981', price: 150 },
+            { id: 'yellow', name: 'Yellow', hex: '#f59e0b', price: 150 },
+            { id: 'purple', name: 'Purple', hex: '#8b5cf6', price: 150 },
+            { id: 'pink', name: 'Pink', hex: '#ec4899', price: 225 },
+            { id: 'cyan', name: 'Cyan', hex: '#06b6d4', price: 225 },
+            { id: 'orange', name: 'Orange', hex: '#f97316', price: 225 },
+            { id: 'lime', name: 'Lime', hex: '#84cc16', price: 225 },
+            { id: 'indigo', name: 'Indigo', hex: '#6366f1', price: 300 },
+            { id: 'teal', name: 'Teal', hex: '#14b8a6', price: 300 },
+            { id: 'rose', name: 'Rose', hex: '#f43f5e', price: 300 },
+            { id: 'amber', name: 'Amber', hex: '#fbbf24', price: 300 },
+            // Rare tier (450-900 orbs)
+            { id: 'emerald', name: 'Emerald', hex: '#34d399', price: 450 },
+            { id: 'violet', name: 'Violet', hex: '#a78bfa', price: 450 },
+            { id: 'sky', name: 'Sky', hex: '#38bdf8', price: 450 },
+            { id: 'coral', name: 'Coral', hex: '#ff7f50', price: 600 },
+            { id: 'turquoise', name: 'Turquoise', hex: '#40e0d0', price: 600 },
+            { id: 'lavender', name: 'Lavender', hex: '#e6e6fa', price: 600 },
+            { id: 'mint', name: 'Mint', hex: '#98ff98', price: 600 },
+            { id: 'peach', name: 'Peach', hex: '#ffdab9', price: 600 },
+            { id: 'salmon', name: 'Salmon', hex: '#fa8072', price: 750 },
+            { id: 'khaki', name: 'Khaki', hex: '#f0e68c', price: 750 },
+            { id: 'plum', name: 'Plum', hex: '#dda0dd', price: 750 },
+            { id: 'tan', name: 'Tan', hex: '#d2b48c', price: 750 },
+            { id: 'olive', name: 'Olive', hex: '#808000', price: 900 },
+            { id: 'maroon', name: 'Maroon', hex: '#800000', price: 900 },
+            { id: 'navy', name: 'Navy', hex: '#000080', price: 900 },
+            { id: 'forest', name: 'Forest Green', hex: '#228b22', price: 900 },
+            // Epic tier (1200-2100 orbs)
+            { id: 'crimson', name: 'Crimson', hex: '#dc143c', price: 1200 },
+            { id: 'royal', name: 'Royal Blue', hex: '#4169e1', price: 1200 },
+            { id: 'orchid', name: 'Orchid', hex: '#da70d6', price: 1200 },
+            { id: 'sienna', name: 'Sienna', hex: '#a0522d', price: 1350 },
+            { id: 'steel', name: 'Steel Blue', hex: '#4682b4', price: 1350 },
+            { id: 'tomato', name: 'Tomato', hex: '#ff6347', price: 1350 },
+            { id: 'slate', name: 'Slate Blue', hex: '#6a5acd', price: 1500 },
+            { id: 'chocolate', name: 'Chocolate', hex: '#d2691e', price: 1500 },
+            { id: 'peru', name: 'Peru', hex: '#cd853f', price: 1500 },
+            { id: 'medium', name: 'Medium Purple', hex: '#9370db', price: 1800 },
+            { id: 'dark', name: 'Dark Cyan', hex: '#008b8b', price: 1800 },
+            { id: 'fire', name: 'Fire Brick', hex: '#b22222', price: 1800 },
+            { id: 'sea', name: 'Sea Green', hex: '#2e8b57', price: 2100 },
+            { id: 'medium', name: 'Medium Sea Green', hex: '#3cb371', price: 2100 },
+            // Legendary tier (2400-3000 orbs)
+            { id: 'dark', name: 'Dark Magenta', hex: '#8b008b', price: 2400 },
+            { id: 'indian', name: 'Indian Red', hex: '#cd5c5c', price: 2400 },
+            { id: 'medium', name: 'Medium Orchid', hex: '#ba55d3', price: 2400 },
+            { id: 'dark', name: 'Dark Goldenrod', hex: '#b8860b', price: 2700 },
+            { id: 'medium', name: 'Medium Turquoise', hex: '#48d1cc', price: 2700 },
+            { id: 'pale', name: 'Pale Violet Red', hex: '#db7093', price: 2700 },
+            { id: 'dark', name: 'Dark Slate Gray', hex: '#2f4f4f', price: 3000 },
+            { id: 'medium', name: 'Medium Slate Blue', hex: '#7b68ee', price: 3000 },
+            { id: 'dark', name: 'Dark Olive Green', hex: '#556b2f', price: 3000 },
+            // Premium tier (4500-6000 orbs) - White/Black/Gold/Silver
+            { id: 'white', name: 'White', hex: '#ffffff', price: 4500 },
+            { id: 'black', name: 'Black', hex: '#000000', price: 4500 },
+            { id: 'gold', name: 'Gold', hex: '#ffd700', price: 5400 },
+            { id: 'silver', name: 'Silver', hex: '#c0c0c0', price: 5400 },
+            { id: 'rainbow', name: 'Rainbow', hex: '#ff0080', price: 6000 }
         ];
         
         let unlockedColors = ['default']; // Array of unlocked color IDs
         let selectedColorId = 'default';
+        
+        // Available auras (25 total, each with independent color and pricing)
+        const availableAuras = [
+            { id: 'none', name: 'None', color: null, price: 0, unlocked: true },
+            // Common tier (150-300 orbs)
+            { id: 'glow_blue', name: 'Blue Glow', color: '#3b82f6', price: 150 },
+            { id: 'glow_red', name: 'Red Glow', color: '#ef4444', price: 150 },
+            { id: 'glow_green', name: 'Green Glow', color: '#10b981', price: 150 },
+            { id: 'glow_yellow', name: 'Yellow Glow', color: '#f59e0b', price: 150 },
+            { id: 'glow_purple', name: 'Purple Glow', color: '#8b5cf6', price: 225 },
+            { id: 'glow_pink', name: 'Pink Glow', color: '#ec4899', price: 225 },
+            { id: 'glow_cyan', name: 'Cyan Glow', color: '#06b6d4', price: 225 },
+            { id: 'glow_orange', name: 'Orange Glow', color: '#f97316', price: 225 },
+            { id: 'glow_lime', name: 'Lime Glow', color: '#84cc16', price: 300 },
+            { id: 'glow_indigo', name: 'Indigo Glow', color: '#6366f1', price: 300 },
+            // Rare tier (450-900 orbs)
+            { id: 'glow_teal', name: 'Teal Glow', color: '#14b8a6', price: 450 },
+            { id: 'glow_rose', name: 'Rose Glow', color: '#f43f5e', price: 450 },
+            { id: 'glow_amber', name: 'Amber Glow', color: '#fbbf24', price: 600 },
+            { id: 'glow_emerald', name: 'Emerald Glow', color: '#34d399', price: 600 },
+            { id: 'glow_violet', name: 'Violet Glow', color: '#a78bfa', price: 750 },
+            { id: 'glow_sky', name: 'Sky Glow', color: '#38bdf8', price: 750 },
+            { id: 'ring_blue', name: 'Blue Ring', color: '#3b82f6', price: 900 },
+            { id: 'ring_red', name: 'Red Ring', color: '#ef4444', price: 900 },
+            // Epic tier (1200-2100 orbs)
+            { id: 'ring_gold', name: 'Gold Ring', color: '#ffd700', price: 1200 },
+            { id: 'halo_white', name: 'White Halo', color: '#ffffff', price: 1500 },
+            { id: 'glow_gold', name: 'Gold Glow', color: '#ffd700', price: 1800 },
+            { id: 'glow_silver', name: 'Silver Glow', color: '#c0c0c0', price: 1800 },
+            // Legendary tier (2400-3000 orbs)
+            { id: 'glow_white', name: 'White Glow', color: '#ffffff', price: 2400 },
+            { id: 'glow_black', name: 'Black Glow', color: '#000000', price: 3000 }
+        ];
+        
+        // Available particle effects (25 total, each with independent color and pricing)
+        const availableParticles = [
+            { id: 'none', name: 'None', color: null, price: 0, unlocked: true },
+            // Common tier (150-300 orbs)
+            { id: 'sparkles_blue', name: 'Blue Sparkles', color: '#3b82f6', price: 150 },
+            { id: 'sparkles_red', name: 'Red Sparkles', color: '#ef4444', price: 150 },
+            { id: 'sparkles_green', name: 'Green Sparkles', color: '#10b981', price: 150 },
+            { id: 'sparkles_yellow', name: 'Yellow Sparkles', color: '#f59e0b', price: 150 },
+            { id: 'sparkles_purple', name: 'Purple Sparkles', color: '#8b5cf6', price: 225 },
+            { id: 'sparkles_pink', name: 'Pink Sparkles', color: '#ec4899', price: 225 },
+            { id: 'sparkles_cyan', name: 'Cyan Sparkles', color: '#06b6d4', price: 225 },
+            { id: 'sparkles_orange', name: 'Orange Sparkles', color: '#f97316', price: 225 },
+            { id: 'sparkles_lime', name: 'Lime Sparkles', color: '#84cc16', price: 300 },
+            { id: 'sparkles_indigo', name: 'Indigo Sparkles', color: '#6366f1', price: 300 },
+            // Rare tier (450-900 orbs)
+            { id: 'sparkles_teal', name: 'Teal Sparkles', color: '#14b8a6', price: 450 },
+            { id: 'sparkles_rose', name: 'Rose Sparkles', color: '#f43f5e', price: 450 },
+            { id: 'sparkles_amber', name: 'Amber Sparkles', color: '#fbbf24', price: 600 },
+            { id: 'sparkles_emerald', name: 'Emerald Sparkles', color: '#34d399', price: 600 },
+            { id: 'sparkles_violet', name: 'Violet Sparkles', color: '#a78bfa', price: 750 },
+            { id: 'sparkles_sky', name: 'Sky Sparkles', color: '#38bdf8', price: 750 },
+            { id: 'trail_blue', name: 'Blue Trail', color: '#3b82f6', price: 900 },
+            { id: 'trail_red', name: 'Red Trail', color: '#ef4444', price: 900 },
+            // Epic tier (1200-2100 orbs)
+            { id: 'trail_gold', name: 'Gold Trail', color: '#ffd700', price: 1200 },
+            { id: 'sparkles_gold', name: 'Gold Sparkles', color: '#ffd700', price: 1500 },
+            { id: 'sparkles_silver', name: 'Silver Sparkles', color: '#c0c0c0', price: 1800 },
+            { id: 'burst_rainbow', name: 'Rainbow Burst', color: '#ff0080', price: 2100 },
+            // Legendary tier (2400-3000 orbs)
+            { id: 'sparkles_white', name: 'White Sparkles', color: '#ffffff', price: 2400 },
+            { id: 'sparkles_black', name: 'Black Sparkles', color: '#000000', price: 3000 }
+        ];
+        
+        let unlockedAuras = ['none'];
+        let unlockedParticles = ['none'];
+        let selectedAuraId = 'none';
+        let selectedParticleId = 'none';
         
         // Load ranking from localStorage
         function loadRanking() {
@@ -1104,13 +1348,29 @@
                 const saved = localStorage.getItem('unlockedColors');
                 if (saved) {
                     unlockedColors = JSON.parse(saved);
+                    // Ensure default color is always unlocked
+                    if (!unlockedColors.includes('default')) {
+                        unlockedColors.push('default');
+                    }
+                } else {
+                    // If no saved data, ensure default is unlocked
+                    if (!unlockedColors.includes('default')) {
+                        unlockedColors.push('default');
+                    }
                 }
                 const savedSelected = localStorage.getItem('selectedColorId');
                 if (savedSelected) {
                     selectedColorId = savedSelected;
+                } else {
+                    // If no saved selection, use default
+                    selectedColorId = 'default';
                 }
             } catch (e) {
                 console.warn('Could not load unlocked colors from localStorage:', e);
+                // On error, ensure default is unlocked
+                if (!unlockedColors.includes('default')) {
+                    unlockedColors = ['default'];
+                }
             }
         }
         
@@ -1120,6 +1380,54 @@
                 localStorage.setItem('selectedColorId', selectedColorId);
             } catch (e) {
                 console.warn('Could not save unlocked colors to localStorage:', e);
+            }
+        }
+        
+        function loadUnlockedAuras() {
+            try {
+                const saved = localStorage.getItem('unlockedAuras');
+                if (saved) {
+                    unlockedAuras = JSON.parse(saved);
+                }
+                const savedSelected = localStorage.getItem('selectedAuraId');
+                if (savedSelected) {
+                    selectedAuraId = savedSelected;
+                }
+            } catch (e) {
+                console.warn('Could not load unlocked auras from localStorage:', e);
+            }
+        }
+        
+        function saveUnlockedAuras() {
+            try {
+                localStorage.setItem('unlockedAuras', JSON.stringify(unlockedAuras));
+                localStorage.setItem('selectedAuraId', selectedAuraId);
+            } catch (e) {
+                console.warn('Could not save unlocked auras to localStorage:', e);
+            }
+        }
+        
+        function loadUnlockedParticles() {
+            try {
+                const saved = localStorage.getItem('unlockedParticles');
+                if (saved) {
+                    unlockedParticles = JSON.parse(saved);
+                }
+                const savedSelected = localStorage.getItem('selectedParticleId');
+                if (savedSelected) {
+                    selectedParticleId = savedSelected;
+                }
+            } catch (e) {
+                console.warn('Could not load unlocked particles from localStorage:', e);
+            }
+        }
+        
+        function saveUnlockedParticles() {
+            try {
+                localStorage.setItem('unlockedParticles', JSON.stringify(unlockedParticles));
+                localStorage.setItem('selectedParticleId', selectedParticleId);
+            } catch (e) {
+                console.warn('Could not save unlocked particles to localStorage:', e);
             }
         }
         
@@ -1148,6 +1456,24 @@
             return false;
         }
         
+        function unlockAura(auraId) {
+            if (!unlockedAuras.includes(auraId)) {
+                unlockedAuras.push(auraId);
+                saveUnlockedAuras();
+                return true;
+            }
+            return false;
+        }
+        
+        function unlockParticle(particleId) {
+            if (!unlockedParticles.includes(particleId)) {
+                unlockedParticles.push(particleId);
+                saveUnlockedParticles();
+                return true;
+            }
+            return false;
+        }
+        
         function unlockRandomColor() {
             const lockedColors = availableColors.filter(c => !unlockedColors.includes(c.id));
             if (lockedColors.length > 0) {
@@ -1163,12 +1489,94 @@
             if (orbDisplay) {
                 orbDisplay.textContent = playerCurrency.orbs;
             }
+            const shopOrbDisplay = document.getElementById('orbDisplay');
+            if (shopOrbDisplay) {
+                shopOrbDisplay.textContent = playerCurrency.orbs || 0;
+            }
+        }
+        
+        function showOrbNotification(amount) {
+            // Remove any existing notification
+            const existingNotification = document.getElementById('orbNotification');
+            if (existingNotification) {
+                existingNotification.remove();
+            }
+            
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.id = 'orbNotification';
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 15px 25px;
+                border-radius: 8px;
+                font-size: 18px;
+                font-weight: 600;
+                z-index: 10001;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+                animation: slideInRight 0.3s ease-out, fadeOut 0.3s ease-in 2.7s forwards;
+                pointer-events: none;
+            `;
+            notification.textContent = `+${amount} Orbs Added 💎`;
+            
+            // Add animation keyframes if they don't exist
+            if (!document.getElementById('orbNotificationStyles')) {
+                const style = document.createElement('style');
+                style.id = 'orbNotificationStyles';
+                style.textContent = `
+                    @keyframes slideInRight {
+                        from {
+                            transform: translateX(100%);
+                            opacity: 0;
+                        }
+                        to {
+                            transform: translateX(0);
+                            opacity: 1;
+                        }
+                    }
+                    @keyframes fadeOut {
+                        from {
+                            opacity: 1;
+                        }
+                        to {
+                            opacity: 0;
+                            transform: translateX(100%);
+                        }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            document.body.appendChild(notification);
+            
+            // Remove notification after animation completes
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 3000);
+        }
+        
+        function showPurchaseOrbsMenu() {
+            // Show purchase options (placeholder for future payment integration)
+            const amount = prompt('Enter amount of orbs to add (for testing):');
+            if (amount && !isNaN(amount) && parseInt(amount) > 0) {
+                addOrbs(parseInt(amount));
+                alert(`Added ${amount} orbs!`);
+                updateOrbDisplay();
+            }
         }
         
         // Load ranking on startup
         loadRanking();
         loadCurrency();
         loadUnlockedColors();
+        loadUnlockedAuras();
+        loadUnlockedParticles();
+        loadSettings();
         
         // Initialize player color from selected color
         setTimeout(() => {
@@ -1197,8 +1605,20 @@
         let isMatchmakingHost = false;
         let matchmakingCheckInterval = null;
         
+        // Training mode state
+        let trainingMode = null;
+        let trainingAIBots = [];
+        let trainingRespawnTimer = 0;
+        let trainingRespawnDelay = 5000; // 5 seconds
+        let trainingSettings = {
+            aiCount: 2,
+            friendlyFire: false,
+            maxHealth: 100,
+            aiSpeed: 60 // percentage
+        };
+        
         // Challenges/Game modes state
-        let currentGameMode = null; // 'spike_dodge', 'dodge_mode', 'target_break', 'freeforall', 'training_1v1', 'training_2v2', or null
+        let currentGameMode = null; // 'spike_dodge', 'dodge_mode', 'target_break', 'freeforall', 'training', or null
         let spikes = [];
         let spikeSpawnTimer = 0;
         let spikeSpeed = 2;
@@ -1211,6 +1631,7 @@
         // Dodge Mode Challenge state
         let aiBombs = []; // Changed from aiBots to aiBombs
         let dodgeModeStartTime = 0;
+        
         let lastBombSpawnTime = 0;
         let bombSpawnInterval = 10000; // 10 seconds
         
@@ -2076,40 +2497,6 @@
                     <div style="font-size: 14px; color: #aaa; text-align: center;">Rating: <span style="color: #fff; font-weight: 600;">${playerRanking.rating}</span></div>
                 </div>
                 
-                <div style="background: rgba(102, 126, 234, 0.1); padding: 12px; border-radius: 6px; margin-bottom: 15px; border: 1px solid rgba(102, 126, 234, 0.3);">
-                    <div style="font-size: 14px; font-weight: 600; color: #667eea; margin-bottom: 10px;">VS Match Stats</div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                        <span style="color: #aaa; font-size: 11px;">Total Matches:</span>
-                        <span style="color: #fff; font-weight: 600; font-size: 11px;">${playerRanking.totalMatches}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                        <span style="color: #aaa; font-size: 11px;">Wins:</span>
-                        <span style="color: #00ff88; font-weight: 600; font-size: 11px;">${playerRanking.wins}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                        <span style="color: #aaa; font-size: 11px;">Losses:</span>
-                        <span style="color: #ff4444; font-weight: 600; font-size: 11px;">${playerRanking.losses}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                        <span style="color: #aaa; font-size: 11px;">Draws:</span>
-                        <span style="color: #ffaa00; font-weight: 600; font-size: 11px;">${playerRanking.draws}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                        <span style="color: #aaa; font-size: 11px;">Win Rate:</span>
-                        <span style="color: #fff; font-weight: 600; font-size: 11px;">${winRate}%</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                        <span style="color: #aaa; font-size: 11px;">Current Streak:</span>
-                        <span style="color: ${playerRanking.winStreak > 0 ? '#ffd700' : '#fff'}; font-weight: 600; font-size: 11px;">
-                            ${playerRanking.winStreak > 0 ? '🔥 ' : ''}${playerRanking.winStreak}
-                        </span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="color: #aaa; font-size: 11px;">Best Streak:</span>
-                        <span style="color: #ffd700; font-weight: 600; font-size: 11px;">🔥 ${playerRanking.bestWinStreak}</span>
-                    </div>
-                </div>
-                
                 <div style="background: rgba(255, 165, 0, 0.1); padding: 12px; border-radius: 6px; margin-bottom: 15px; border: 1px solid rgba(255, 165, 0, 0.3);">
                     <div style="font-size: 14px; font-weight: 600; color: #ffaa00; margin-bottom: 10px;">Spike Dodge Challenge</div>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
@@ -2162,26 +2549,6 @@
                     </div>
                 </div>
                 
-                <div style="background: rgba(200, 100, 255, 0.1); padding: 12px; border-radius: 6px; margin-bottom: 15px; border: 1px solid rgba(200, 100, 255, 0.3);">
-                    <div style="font-size: 14px; font-weight: 600; color: #c864ff; margin-bottom: 10px;">FreeForAll Stats</div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                        <span style="color: #aaa; font-size: 11px;">Best Survival Time:</span>
-                        <span style="color: #ffd700; font-weight: 600; font-size: 11px;">${playerRanking.freeForAll.bestSurvivalTime}s</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                        <span style="color: #aaa; font-size: 11px;">Times Played:</span>
-                        <span style="color: #fff; font-weight: 600; font-size: 11px;">${playerRanking.freeForAll.totalPlayed}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                        <span style="color: #aaa; font-size: 11px;">Total Wins:</span>
-                        <span style="color: #00ff88; font-weight: 600; font-size: 11px;">${playerRanking.freeForAll.totalWins}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="color: #aaa; font-size: 11px;">Total Time Survived:</span>
-                        <span style="color: #fff; font-weight: 600; font-size: 11px;">${Math.floor(playerRanking.freeForAll.totalTimeSurvived / 60)}m ${playerRanking.freeForAll.totalTimeSurvived % 60}s</span>
-                    </div>
-                </div>
-                
                 ${otherPlayersStats.length > 0 ? `
                     <div style="background: rgba(100, 200, 255, 0.1); padding: 12px; border-radius: 6px; border: 1px solid rgba(100, 200, 255, 0.3);">
                         <div style="font-size: 14px; font-weight: 600; color: #64c8ff; margin-bottom: 10px;">Other Players in Game</div>
@@ -2210,16 +2577,50 @@
             document.getElementById('trainingMenuScreen').classList.add('active');
         }
         
-        function startTraining(mode) {
-            // Set training mode
-            trainingMode = mode;
-            currentGameMode = mode === '1v1' ? 'training_1v1' : 'training_2v2';
+        function showTrainingSettings() {
+            hideAllScreens();
+            document.getElementById('trainingSettingsScreen').classList.add('active');
+            updateTrainingSettings();
+        }
+        
+        function updateTrainingSettings() {
+            // Update settings from UI
+            const aiCountSlider = document.getElementById('aiCountSlider');
+            const friendlyFireCheckbox = document.getElementById('friendlyFireCheckbox');
+            const healthSlider = document.getElementById('healthSlider');
+            const aiSpeedSlider = document.getElementById('aiSpeedSlider');
+            
+            if (aiCountSlider) {
+                trainingSettings.aiCount = parseInt(aiCountSlider.value);
+                const aiCountDisplay = document.getElementById('aiCountDisplay');
+                if (aiCountDisplay) {
+                    aiCountDisplay.textContent = trainingSettings.aiCount;
+                }
+            }
+            
+            if (friendlyFireCheckbox) {
+                trainingSettings.friendlyFire = friendlyFireCheckbox.checked;
+            }
+            
+            if (aiSpeedSlider) {
+                trainingSettings.aiSpeed = parseInt(aiSpeedSlider.value);
+                const aiSpeedDisplay = document.getElementById('aiSpeedDisplay');
+                if (aiSpeedDisplay) {
+                    aiSpeedDisplay.textContent = trainingSettings.aiSpeed + '%';
+                }
+            }
+        }
+        
+        function startTrainingWithSettings() {
+            // Apply settings and start training
+            updateTrainingSettings();
+            currentGameMode = 'training';
             trainingAIBots = [];
             trainingRespawnTimer = 0;
             playerDead = false;
             deathParticles = [];
             
-            // Reset player
+            // Reset player with custom health
             if (localPlayer) {
                 localPlayer.x = canvas.width / 2;
                 localPlayer.y = canvas.height / 2;
@@ -2227,17 +2628,16 @@
                 localPlayer.vy = 0;
                 localPlayer.visible = true;
                 localPlayer.dead = false;
-                localPlayer.health = 100;
-                localPlayer.maxHealth = 100;
+                localPlayer.health = trainingSettings.maxHealth;
+                localPlayer.maxHealth = trainingSettings.maxHealth;
             }
             
             if (healthBar) {
-                healthBar.setHealth(100);
+                healthBar.setHealth(trainingSettings.maxHealth);
             }
             
-            // Spawn AI bots based on mode
-            const aiCount = mode === '1v1' ? 1 : 2;
-            for (let i = 0; i < aiCount; i++) {
+            // Spawn AI bots based on settings
+            for (let i = 0; i < trainingSettings.aiCount; i++) {
                 spawnTrainingAI(i);
             }
             
@@ -2263,8 +2663,8 @@
                 targetScaleY: 1,
                 rotation: 0,
                 color: `hsl(${Math.random() * 60 + 0}, 100%, 50%)`, // Red to orange
-                health: 100,
-                maxHealth: 100,
+                health: trainingSettings.maxHealth,
+                maxHealth: trainingSettings.maxHealth,
                 dead: false,
                 visible: true,
                 lastAttackTime: 0,
@@ -2277,27 +2677,60 @@
             trainingAIBots.push(ai);
         }
         
-        function updateTrainingMode(deltaTime) {
-            if (currentGameMode !== 'training_1v1' && currentGameMode !== 'training_2v2') return;
-            if (playerDead) return;
+        function resetTrainingMode() {
+            // Reset all training state
+            trainingAIBots = [];
+            trainingRespawnTimer = 0;
+            playerDead = false;
+            deathParticles = [];
             
-            // Check if all AIs are dead
+            // Reset player with training settings
+            if (localPlayer) {
+                localPlayer.x = canvas.width / 2;
+                localPlayer.y = canvas.height / 2;
+                localPlayer.vx = 0;
+                localPlayer.vy = 0;
+                localPlayer.visible = true;
+                localPlayer.dead = false;
+                localPlayer.health = trainingSettings.maxHealth;
+                localPlayer.maxHealth = trainingSettings.maxHealth;
+            }
+            
+            if (healthBar) {
+                healthBar.setHealth(trainingSettings.maxHealth);
+            }
+            
+            // Return to training menu
+            currentGameMode = null;
+            hideAllScreens();
+            document.getElementById('trainingMenuScreen').classList.add('active');
+        }
+        
+        function updateTrainingMode(deltaTime) {
+            if (currentGameMode !== 'training') return;
+            
+            // If player is dead, reset training mode after a delay
+            if (playerDead) {
+                trainingRespawnTimer += deltaTime;
+                
+                if (trainingRespawnTimer >= trainingRespawnDelay) {
+                    // Reset training mode
+                    resetTrainingMode();
+                }
+                return;
+            }
+            
+            // Check if all AIs are dead (player won)
             const aliveAIs = trainingAIBots.filter(ai => !ai.dead);
             const deadAIs = trainingAIBots.filter(ai => ai.dead);
             
-            // If all AIs are dead, start respawn timer
+            // If all AIs are dead, reset training mode after a delay
             if (aliveAIs.length === 0 && deadAIs.length > 0) {
                 trainingRespawnTimer += deltaTime;
                 
                 if (trainingRespawnTimer >= trainingRespawnDelay) {
-                    // Respawn all AIs
-                    trainingRespawnTimer = 0;
-                    const aiCount = trainingMode === '1v1' ? 1 : 2;
-                    trainingAIBots = []; // Clear dead AIs
-                    
-                    for (let i = 0; i < aiCount; i++) {
-                        spawnTrainingAI(i);
-                    }
+                    // Reset training mode instead of respawning
+                    resetTrainingMode();
                 }
             } else {
                 // Reset timer if there are alive AIs
@@ -2325,6 +2758,23 @@
                         handleTrainingCollision(ai, localPlayer);
                     }
                 }
+                
+                // Check collision with other AIs if friendly fire is enabled
+                if (trainingSettings.friendlyFire) {
+                    for (let j = i + 1; j < trainingAIBots.length; j++) {
+                        const otherAI = trainingAIBots[j];
+                        if (otherAI.dead) continue;
+                        
+                        const dx = ai.x - otherAI.x;
+                        const dy = ai.y - otherAI.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        const collisionDist = ai.baseRadius + otherAI.baseRadius;
+                        
+                        if (dist < collisionDist) {
+                            handleTrainingAICollision(ai, otherAI);
+                        }
+                    }
+                }
             }
             
             // Update death particles
@@ -2334,7 +2784,7 @@
         function updateTrainingAI(ai, deltaTime) {
             if (!localPlayer || playerDead) return;
             
-            const moveSpeed = DEFAULT_MOVE_SPEED * 0.6; // Slower than player
+            const moveSpeed = DEFAULT_MOVE_SPEED * (trainingSettings.aiSpeed / 100); // Based on settings
             const now = Date.now();
             
             // Random wandering behavior
@@ -2549,6 +2999,103 @@
                             if (newAIHealth <= 0 && !ai.dead) {
                                 ai.dead = true;
                                 ai.visible = false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        function handleTrainingAICollision(ai1, ai2) {
+            const dx = ai2.x - ai1.x;
+            const dy = ai2.y - ai1.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const minDistance = ai1.baseRadius + ai2.baseRadius;
+            
+            if (distance < minDistance && distance > 0) {
+                // Prevent multiple damage from same collision (cooldown of 0.5 seconds)
+                const now = Date.now();
+                const collisionCooldown = 500; // 500ms cooldown
+                
+                // Calculate overlap
+                const overlap = minDistance - distance;
+                const separationX = (dx / distance) * overlap * 0.5;
+                const separationY = (dy / distance) * overlap * 0.5;
+                
+                // Store velocities before collision
+                const ai1VelBefore = Math.sqrt(ai1.vx * ai1.vx + ai1.vy * ai1.vy);
+                const ai2VelBefore = Math.sqrt(ai2.vx * ai2.vx + ai2.vy * ai2.vy);
+                
+                // Push entities apart
+                ai1.x -= separationX;
+                ai1.y -= separationY;
+                ai2.x += separationX;
+                ai2.y += separationY;
+                
+                // Apply collision response (bounce effect)
+                const normalX = dx / distance;
+                const normalY = dy / distance;
+                const relativeVx = ai2.vx - ai1.vx;
+                const relativeVy = ai2.vy - ai1.vy;
+                const relativeSpeed = relativeVx * normalX + relativeVy * normalY;
+                
+                // Only apply bounce if entities are moving towards each other
+                if (relativeSpeed < 0) {
+                    const bounceStrength = 0.3;
+                    const impulse = relativeSpeed * bounceStrength;
+                    
+                    ai1.vx += impulse * normalX;
+                    ai1.vy += impulse * normalY;
+                    ai2.vx -= impulse * normalX;
+                    ai2.vy -= impulse * normalY;
+                    
+                    // Apply damage based on speed difference
+                    if (now - ai1.lastCollisionTime > collisionCooldown && 
+                        now - ai2.lastCollisionTime > collisionCooldown) {
+                        
+                        const ai1InitialSpeed = ai1VelBefore;
+                        const ai2InitialSpeed = ai2VelBefore;
+                        
+                        if (ai1InitialSpeed > ai2InitialSpeed * 1.1) {
+                            // AI1 is hitting AI2
+                            const newAI2Health = Math.max(0, ai2.health - 10);
+                            ai2.health = newAI2Health;
+                            ai1.lastCollisionTime = now;
+                            ai2.lastCollisionTime = now;
+                            
+                            if (newAI2Health <= 0 && !ai2.dead) {
+                                ai2.dead = true;
+                                ai2.visible = false;
+                            }
+                        } else if (ai2InitialSpeed > ai1InitialSpeed * 1.1) {
+                            // AI2 is hitting AI1
+                            const newAI1Health = Math.max(0, ai1.health - 10);
+                            ai1.health = newAI1Health;
+                            ai1.lastCollisionTime = now;
+                            ai2.lastCollisionTime = now;
+                            
+                            if (newAI1Health <= 0 && !ai1.dead) {
+                                ai1.dead = true;
+                                ai1.visible = false;
+                            }
+                        } else {
+                            // Similar speeds - both take damage
+                            const newAI1Health = Math.max(0, ai1.health - 5);
+                            const newAI2Health = Math.max(0, ai2.health - 5);
+                            
+                            ai1.health = newAI1Health;
+                            ai2.health = newAI2Health;
+                            ai1.lastCollisionTime = now;
+                            ai2.lastCollisionTime = now;
+                            
+                            if (newAI1Health <= 0 && !ai1.dead) {
+                                ai1.dead = true;
+                                ai1.visible = false;
+                            }
+                            
+                            if (newAI2Health <= 0 && !ai2.dead) {
+                                ai2.dead = true;
+                                ai2.visible = false;
                             }
                         }
                     }
@@ -3648,23 +4195,23 @@
             
             saveRanking();
             
-            // Award orbs and random unlocks
+            // Award orbs - score = orbs earned
             let orbsEarned = 0;
             let randomUnlock = null;
             
             if (currentGameMode === 'spike_dodge') {
-                orbsEarned = Math.floor(spikesDodged / 10); // 1 orb per 10 spikes
+                orbsEarned = spikesDodged; // Score = orbs
                 if (Math.random() < 0.1) { // 10% chance for random unlock
                     randomUnlock = unlockRandomColor();
                 }
             } else if (currentGameMode === 'dodge_mode') {
                 const survivalTime = Math.floor((Date.now() - dodgeModeStartTime) / 1000);
-                orbsEarned = Math.floor(survivalTime / 5); // 1 orb per 5 seconds
+                orbsEarned = survivalTime; // Score = orbs
                 if (Math.random() < 0.15) { // 15% chance for random unlock
                     randomUnlock = unlockRandomColor();
                 }
             } else if (currentGameMode === 'target_break') {
-                orbsEarned = Math.floor(targetsBroken / 5); // 1 orb per 5 targets
+                orbsEarned = targetsBroken; // Score = orbs
                 if (Math.random() < 0.12) { // 12% chance for random unlock
                     randomUnlock = unlockRandomColor();
                 }
@@ -3672,6 +4219,10 @@
             
             if (orbsEarned > 0) {
                 addOrbs(orbsEarned);
+                // Show notification in top-right after a brief delay to ensure death screen is displayed
+                setTimeout(() => {
+                    showOrbNotification(orbsEarned);
+                }, 100);
             }
             
             // Create death screen overlay
@@ -4274,45 +4825,237 @@
             document.getElementById('controlsScreen').classList.add('active');
         }
         
+        function showSettingsMenu() {
+            hideAllScreens();
+            document.getElementById('settingsScreen').classList.add('active');
+            loadSettings();
+            updateSettingsDisplay();
+        }
+        
+        function loadSettings() {
+            try {
+                const saved = localStorage.getItem('gameSettings');
+                if (saved) {
+                    gameSettings = JSON.parse(saved);
+                    // Apply loaded settings
+                    applyResolution(gameSettings.resolution);
+                    targetFPS = gameSettings.fpsLimit;
+                    frameInterval = targetFPS > 0 ? 1000 / targetFPS : 0;
+                }
+            } catch (e) {
+                console.warn('Could not load settings from localStorage:', e);
+            }
+        }
+        
+        function saveSettings() {
+            try {
+                localStorage.setItem('gameSettings', JSON.stringify(gameSettings));
+            } catch (e) {
+                console.warn('Could not save settings to localStorage:', e);
+            }
+        }
+        
+        function updateSettingsDisplay() {
+            const resolutionSelect = document.getElementById('resolutionSelect');
+            const fpsSelect = document.getElementById('fpsSelect');
+            const graphicsSelect = document.getElementById('graphicsSelect');
+            const volumeSlider = document.getElementById('volumeSlider');
+            const volumeDisplay = document.getElementById('volumeDisplay');
+            const showFPSCheckbox = document.getElementById('showFPSCheckbox');
+            const vsyncCheckbox = document.getElementById('vsyncCheckbox');
+            
+            if (resolutionSelect) resolutionSelect.value = gameSettings.resolution;
+            if (fpsSelect) fpsSelect.value = gameSettings.fpsLimit;
+            if (graphicsSelect) graphicsSelect.value = gameSettings.graphicsQuality;
+            if (volumeSlider) {
+                volumeSlider.value = gameSettings.masterVolume;
+                if (volumeDisplay) volumeDisplay.textContent = gameSettings.masterVolume + '%';
+            }
+            if (showFPSCheckbox) showFPSCheckbox.checked = gameSettings.showFPS;
+            if (vsyncCheckbox) vsyncCheckbox.checked = gameSettings.vsync;
+        }
+        
+        function applyResolution(resolution) {
+            const [width, height] = resolution.split('x').map(Number);
+            BASE_WIDTH = width;
+            BASE_HEIGHT = height;
+            BASE_ASPECT_RATIO = BASE_WIDTH / BASE_HEIGHT;
+            resizeCanvas();
+        }
+        
+        function applySettings() {
+            const resolutionSelect = document.getElementById('resolutionSelect');
+            const fpsSelect = document.getElementById('fpsSelect');
+            const graphicsSelect = document.getElementById('graphicsSelect');
+            const volumeSlider = document.getElementById('volumeSlider');
+            const showFPSCheckbox = document.getElementById('showFPSCheckbox');
+            const vsyncCheckbox = document.getElementById('vsyncCheckbox');
+            
+            if (resolutionSelect) {
+                gameSettings.resolution = resolutionSelect.value;
+                applyResolution(gameSettings.resolution);
+            }
+            if (fpsSelect) {
+                gameSettings.fpsLimit = parseInt(fpsSelect.value);
+                targetFPS = gameSettings.fpsLimit;
+                frameInterval = targetFPS > 0 ? 1000 / targetFPS : 0;
+            }
+            if (graphicsSelect) {
+                gameSettings.graphicsQuality = graphicsSelect.value;
+            }
+            if (volumeSlider) {
+                gameSettings.masterVolume = parseInt(volumeSlider.value);
+            }
+            if (showFPSCheckbox) {
+                gameSettings.showFPS = showFPSCheckbox.checked;
+            }
+            if (vsyncCheckbox) {
+                gameSettings.vsync = vsyncCheckbox.checked;
+            }
+            
+            saveSettings();
+            alert('Settings applied!');
+        }
+        
+        function resetSettings() {
+            gameSettings = {
+                resolution: '1920x1080',
+                fpsLimit: 60,
+                graphicsQuality: 'medium',
+                masterVolume: 100,
+                showFPS: false,
+                vsync: true
+            };
+            updateSettingsDisplay();
+            applySettings();
+        }
+        
+        // Volume slider update
+        document.addEventListener('DOMContentLoaded', () => {
+            const volumeSlider = document.getElementById('volumeSlider');
+            const volumeDisplay = document.getElementById('volumeDisplay');
+            if (volumeSlider && volumeDisplay) {
+                volumeSlider.addEventListener('input', (e) => {
+                    volumeDisplay.textContent = e.target.value + '%';
+                });
+            }
+        });
+        
+        let currentShopCategory = 'colors';
+        
         function showShopMenu() {
             hideAllScreens();
             document.getElementById('shopScreen').classList.add('active');
-            updateShopDisplay();
+            switchShopCategory('colors');
             updateOrbDisplay();
+        }
+        
+        function switchShopCategory(category) {
+            currentShopCategory = category;
+            
+            // Update button styles
+            const colorsBtn = document.getElementById('shopCategoryColors');
+            const aurasBtn = document.getElementById('shopCategoryAuras');
+            const particlesBtn = document.getElementById('shopCategoryParticles');
+            if (colorsBtn) colorsBtn.style.background = category === 'colors' ? 'rgba(102, 126, 234, 0.3)' : '';
+            if (aurasBtn) aurasBtn.style.background = category === 'auras' ? 'rgba(102, 126, 234, 0.3)' : '';
+            if (particlesBtn) particlesBtn.style.background = category === 'particles' ? 'rgba(102, 126, 234, 0.3)' : '';
+            
+            updateShopDisplay();
         }
         
         function updateShopDisplay() {
             const container = document.getElementById('shopItemsContainer');
             if (!container) return;
             
-            container.innerHTML = availableColors.map(color => {
-                const isUnlocked = unlockedColors.includes(color.id);
-                const canAfford = playerCurrency.orbs >= color.price;
-                
-                return `
-                    <div style="background: rgba(102, 126, 234, 0.1); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid ${isUnlocked ? 'rgba(0, 255, 0, 0.3)' : 'rgba(102, 126, 234, 0.3)'};">
-                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                            <div style="width: 40px; height: 40px; border-radius: 50%; background: ${color.hex}; border: 2px solid #fff;"></div>
-                            <div style="flex: 1;">
-                                <div style="font-weight: 600; color: #fff; margin-bottom: 3px;">${color.name}</div>
-                                ${isUnlocked ? 
-                                    '<div style="color: #00ff88; font-size: 11px;">✓ Unlocked</div>' : 
-                                    `<div style="color: #ffd700; font-size: 11px;">Price: ${color.price} Orbs</div>`
-                                }
+            if (currentShopCategory === 'colors') {
+                container.innerHTML = availableColors.map(color => {
+                    const isUnlocked = unlockedColors.includes(color.id);
+                    const canAfford = playerCurrency.orbs >= color.price;
+                    
+                    return `
+                        <div style="background: rgba(102, 126, 234, 0.1); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid ${isUnlocked ? 'rgba(0, 255, 0, 0.3)' : 'rgba(102, 126, 234, 0.3)'};">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                                <div style="width: 40px; height: 40px; border-radius: 50%; background: ${color.hex}; border: 2px solid #fff;"></div>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 600; color: #fff; margin-bottom: 3px;">${color.name}</div>
+                                    ${isUnlocked ? 
+                                        '<div style="color: #00ff88; font-size: 11px;">✓ Unlocked</div>' : 
+                                        `<div style="color: #ffd700; font-size: 11px;">Price: ${color.price} Orbs</div>`
+                                    }
+                                </div>
                             </div>
+                            ${!isUnlocked ? (
+                                canAfford ? 
+                                    `<button class="menu-button" onclick="purchaseColor('${color.id}')" style="width: 100%; padding: 8px; font-size: 12px;">Buy</button>` :
+                                    `<button class="menu-button" style="width: 100%; padding: 8px; font-size: 12px; opacity: 0.5; cursor: not-allowed;" disabled>Not Enough Orbs</button>`
+                            ) : (
+                                selectedColorId === color.id ?
+                                    '<div style="text-align: center; color: #00ff88; font-size: 11px; padding: 5px;">✓ Selected</div>' :
+                                    `<button class="menu-button" onclick="selectColor('${color.id}')" style="width: 100%; padding: 8px; font-size: 12px;">Select</button>`
+                            )}
                         </div>
-                        ${!isUnlocked ? (
-                            canAfford ? 
-                                `<button class="menu-button" onclick="purchaseColor('${color.id}')" style="width: 100%; padding: 8px; font-size: 12px;">Buy</button>` :
-                                `<button class="menu-button" style="width: 100%; padding: 8px; font-size: 12px; opacity: 0.5; cursor: not-allowed;" disabled>Not Enough Orbs</button>`
-                        ) : (
-                            selectedColorId === color.id ?
-                                '<div style="text-align: center; color: #00ff88; font-size: 11px; padding: 5px;">✓ Selected</div>' :
-                                `<button class="menu-button" onclick="selectColor('${color.id}')" style="width: 100%; padding: 8px; font-size: 12px;">Select</button>`
-                        )}
-                    </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
+            } else if (currentShopCategory === 'auras') {
+                container.innerHTML = availableAuras.filter(aura => aura.id !== 'none').map(aura => {
+                    const isUnlocked = unlockedAuras.includes(aura.id);
+                    const canAfford = playerCurrency.orbs >= aura.price;
+                    
+                    return `
+                        <div style="background: rgba(102, 126, 234, 0.1); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid ${isUnlocked ? 'rgba(0, 255, 0, 0.3)' : 'rgba(102, 126, 234, 0.3)'};">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                                <div style="width: 40px; height: 40px; border-radius: 50%; background: ${aura.color || 'rgba(102, 126, 234, 0.2)'}; border: 2px solid #fff;"></div>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 600; color: #fff; margin-bottom: 3px;">${aura.name}</div>
+                                    ${isUnlocked ? 
+                                        '<div style="color: #00ff88; font-size: 11px;">✓ Unlocked</div>' : 
+                                        `<div style="color: #ffd700; font-size: 11px;">Price: ${aura.price} Orbs</div>`
+                                    }
+                                </div>
+                            </div>
+                            ${!isUnlocked ? (
+                                canAfford ? 
+                                    `<button class="menu-button" onclick="purchaseAura('${aura.id}')" style="width: 100%; padding: 8px; font-size: 12px;">Buy</button>` :
+                                    `<button class="menu-button" style="width: 100%; padding: 8px; font-size: 12px; opacity: 0.5; cursor: not-allowed;" disabled>Not Enough Orbs</button>`
+                            ) : (
+                                selectedAuraId === aura.id ?
+                                    '<div style="text-align: center; color: #00ff88; font-size: 11px; padding: 5px;">✓ Selected</div>' :
+                                    `<button class="menu-button" onclick="selectAura('${aura.id}')" style="width: 100%; padding: 8px; font-size: 12px;">Select</button>`
+                            )}
+                        </div>
+                    `;
+                }).join('');
+            } else if (currentShopCategory === 'particles') {
+                container.innerHTML = availableParticles.filter(particle => particle.id !== 'none').map(particle => {
+                    const isUnlocked = unlockedParticles.includes(particle.id);
+                    const canAfford = playerCurrency.orbs >= particle.price;
+                    
+                    return `
+                        <div style="background: rgba(102, 126, 234, 0.1); padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid ${isUnlocked ? 'rgba(0, 255, 0, 0.3)' : 'rgba(102, 126, 234, 0.3)'};">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                                <div style="width: 40px; height: 40px; border-radius: 50%; background: ${particle.color || 'rgba(102, 126, 234, 0.2)'}; border: 2px solid #fff;"></div>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 600; color: #fff; margin-bottom: 3px;">${particle.name}</div>
+                                    ${isUnlocked ? 
+                                        '<div style="color: #00ff88; font-size: 11px;">✓ Unlocked</div>' : 
+                                        `<div style="color: #ffd700; font-size: 11px;">Price: ${particle.price} Orbs</div>`
+                                    }
+                                </div>
+                            </div>
+                            ${!isUnlocked ? (
+                                canAfford ? 
+                                    `<button class="menu-button" onclick="purchaseParticle('${particle.id}')" style="width: 100%; padding: 8px; font-size: 12px;">Buy</button>` :
+                                    `<button class="menu-button" style="width: 100%; padding: 8px; font-size: 12px; opacity: 0.5; cursor: not-allowed;" disabled>Not Enough Orbs</button>`
+                            ) : (
+                                selectedParticleId === particle.id ?
+                                    '<div style="text-align: center; color: #00ff88; font-size: 11px; padding: 5px;">✓ Selected</div>' :
+                                    `<button class="menu-button" onclick="selectParticle('${particle.id}')" style="width: 100%; padding: 8px; font-size: 12px;">Select</button>`
+                            )}
+                        </div>
+                    `;
+                }).join('');
+            }
         }
         
         function purchaseColor(colorId) {
@@ -4329,6 +5072,44 @@
                 updateShopDisplay();
                 updateCustomizeDisplay();
                 alert(`Unlocked ${color.name}!`);
+            } else {
+                alert('Not enough orbs!');
+            }
+        }
+        
+        function purchaseAura(auraId) {
+            const aura = availableAuras.find(a => a.id === auraId);
+            if (!aura) return;
+            
+            if (unlockedAuras.includes(auraId)) {
+                selectAura(auraId);
+                return;
+            }
+            
+            if (spendOrbs(aura.price)) {
+                unlockAura(auraId);
+                updateShopDisplay();
+                updateCustomizeDisplay();
+                alert(`Unlocked ${aura.name}!`);
+            } else {
+                alert('Not enough orbs!');
+            }
+        }
+        
+        function purchaseParticle(particleId) {
+            const particle = availableParticles.find(p => p.id === particleId);
+            if (!particle) return;
+            
+            if (unlockedParticles.includes(particleId)) {
+                selectParticle(particleId);
+                return;
+            }
+            
+            if (spendOrbs(particle.price)) {
+                unlockParticle(particleId);
+                updateShopDisplay();
+                updateCustomizeDisplay();
+                alert(`Unlocked ${particle.name}!`);
             } else {
                 alert('Not enough orbs!');
             }
@@ -4369,32 +5150,66 @@
         }
         
         function updateCustomizeDisplay() {
-            const container = document.getElementById('colorSelectionContainer');
-            if (!container) return;
-            
-            // Only show unlocked colors
-            const unlockedColorList = availableColors.filter(color => unlockedColors.includes(color.id));
-            
-            container.innerHTML = unlockedColorList.map(color => {
-                const isSelected = selectedColorId === color.id;
+            // Update colors
+            const colorContainer = document.getElementById('colorSelectionContainer');
+            if (colorContainer) {
+                // Ensure we have at least the default color unlocked
+                if (unlockedColors.length === 0 || !unlockedColors.includes('default')) {
+                    unlockedColors = ['default'];
+                    saveUnlockedColors();
+                }
                 
-                return `
-                    <div style="
-                        position: relative;
-                        width: 60px;
-                        height: 60px;
-                        border-radius: 50%;
-                        background: ${color.hex};
-                        border: 3px solid ${isSelected ? '#ffd700' : '#fff'};
-                        cursor: pointer;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                    " onclick="selectColor('${color.id}')" title="${color.name}">
-                        ${isSelected ? '<div style="font-size: 20px; color: #ffd700;">✓</div>' : ''}
-                    </div>
-                `;
-            }).join('');
+                const unlockedColorList = availableColors.filter(color => unlockedColors.includes(color.id));
+                
+                if (unlockedColorList.length === 0) {
+                    // Fallback: show at least the default color
+                    const defaultColor = availableColors.find(c => c.id === 'default');
+                    if (defaultColor) {
+                        colorContainer.innerHTML = `
+                            <div style="
+                                position: relative;
+                                width: 60px;
+                                height: 60px;
+                                border-radius: 50%;
+                                background: ${defaultColor.hex};
+                                border: 3px solid ${selectedColorId === 'default' ? '#ffd700' : '#fff'};
+                                cursor: pointer;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                            " onclick="selectColor('default')" title="${defaultColor.name}">
+                                ${selectedColorId === 'default' ? '<div style="font-size: 20px; color: #ffd700;">✓</div>' : ''}
+                            </div>
+                        `;
+                    }
+                } else {
+                    colorContainer.innerHTML = unlockedColorList.map(color => {
+                        const isSelected = selectedColorId === color.id;
+                        return `
+                            <div style="
+                                position: relative;
+                                width: 60px;
+                                height: 60px;
+                                border-radius: 50%;
+                                background: ${color.hex};
+                                border: 3px solid ${isSelected ? '#ffd700' : '#fff'};
+                                cursor: pointer;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                            " onclick="selectColor('${color.id}')" title="${color.name}">
+                                ${isSelected ? '<div style="font-size: 20px; color: #ffd700;">✓</div>' : ''}
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+            
+            // Update auras
+            updateAuraDisplay();
+            
+            // Update particles
+            updateParticleDisplay();
         }
         
         function updateImagePreview() {
@@ -4961,6 +5776,153 @@
             ctx.restore();
         }
         
+        // Particle system for particle effects
+        let particleSystem = [];
+        
+        function drawAura(x, y, auraId) {
+            if (!auraId || auraId === 'none') return;
+            
+            const aura = availableAuras.find(a => a.id === auraId);
+            if (!aura || !aura.color) return;
+            
+            const radius = DEFAULT_BUBBLE_SIZE;
+            ctx.save();
+            ctx.translate(x, y);
+            
+            // Parse color
+            const color = aura.color;
+            const time = Date.now() * 0.001;
+            
+            if (auraId.startsWith('glow_')) {
+                // Glow effect - pulsing outer glow
+                const pulse = 1 + Math.sin(time * 2) * 0.1;
+                const glowRadius = radius * (1.3 + pulse * 0.2);
+                
+                const gradient = ctx.createRadialGradient(0, 0, radius, 0, 0, glowRadius);
+                gradient.addColorStop(0, color + '80');
+                gradient.addColorStop(0.5, color + '40');
+                gradient.addColorStop(1, color + '00');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(0, 0, glowRadius, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (auraId.startsWith('ring_')) {
+                // Ring effect - rotating ring
+                const ringRadius = radius * 1.2;
+                const ringWidth = 5;
+                ctx.strokeStyle = color;
+                ctx.lineWidth = ringWidth;
+                ctx.globalAlpha = 0.7;
+                ctx.beginPath();
+                ctx.arc(0, 0, ringRadius, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Second ring
+                ctx.beginPath();
+                ctx.arc(0, 0, ringRadius * 0.85, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.globalAlpha = 1;
+            } else if (auraId.startsWith('halo_')) {
+                // Halo effect - floating ring above
+                const haloRadius = radius * 1.1;
+                const haloY = -radius * 1.3;
+                const gradient = ctx.createLinearGradient(0, haloY - haloRadius, 0, haloY + haloRadius);
+                gradient.addColorStop(0, color + 'FF');
+                gradient.addColorStop(0.5, color + 'AA');
+                gradient.addColorStop(1, color + '00');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.ellipse(0, haloY, haloRadius, haloRadius * 0.3, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            ctx.restore();
+        }
+        
+        function drawParticles(x, y, particleId) {
+            if (!particleId || particleId === 'none') return;
+            
+            const particle = availableParticles.find(p => p.id === particleId);
+            if (!particle || !particle.color) return;
+            
+            const radius = DEFAULT_BUBBLE_SIZE;
+            const time = Date.now() * 0.001;
+            
+            if (particleId.startsWith('sparkles_')) {
+                // Sparkles - random sparkles around player
+                const sparkleCount = 8;
+                for (let i = 0; i < sparkleCount; i++) {
+                    const angle = (time * 2 + i * (Math.PI * 2 / sparkleCount)) % (Math.PI * 2);
+                    const dist = radius * (1.2 + Math.sin(time * 3 + i) * 0.3);
+                    const sparkleX = x + Math.cos(angle) * dist;
+                    const sparkleY = y + Math.sin(angle) * dist;
+                    const size = 3 + Math.sin(time * 5 + i) * 2;
+                    
+                    ctx.save();
+                    ctx.globalAlpha = 0.6 + Math.sin(time * 4 + i) * 0.4;
+                    ctx.fillStyle = particle.color;
+                    ctx.beginPath();
+                    ctx.arc(sparkleX, sparkleY, size, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            } else if (particleId.startsWith('trail_')) {
+                // Trail - particles following movement
+                if (!particleSystem) particleSystem = [];
+                
+                // Add new particle
+                if (Math.random() < 0.3) {
+                    particleSystem.push({
+                        x: x + (Math.random() - 0.5) * radius * 0.5,
+                        y: y + (Math.random() - 0.5) * radius * 0.5,
+                        vx: (Math.random() - 0.5) * 2,
+                        vy: (Math.random() - 0.5) * 2,
+                        life: 1.0,
+                        size: 2 + Math.random() * 3,
+                        color: particle.color
+                    });
+                }
+                
+                // Update and draw particles
+                particleSystem = particleSystem.filter(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.life -= 0.02;
+                    p.vy += 0.1; // Gravity
+                    
+                    ctx.save();
+                    ctx.globalAlpha = p.life;
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                    
+                    return p.life > 0;
+                });
+            } else if (particleId === 'burst_rainbow') {
+                // Rainbow burst - colorful particles
+                const burstCount = 12;
+                for (let i = 0; i < burstCount; i++) {
+                    const angle = (i * (Math.PI * 2 / burstCount) + time) % (Math.PI * 2);
+                    const dist = radius * (1.1 + Math.sin(time * 2) * 0.2);
+                    const burstX = x + Math.cos(angle) * dist;
+                    const burstY = y + Math.sin(angle) * dist;
+                    
+                    const hue = (i * 30 + time * 50) % 360;
+                    ctx.save();
+                    ctx.globalAlpha = 0.7;
+                    ctx.fillStyle = `hsl(${hue}, 100%, 60%)`;
+                    ctx.beginPath();
+                    ctx.arc(burstX, burstY, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            }
+        }
+        
         function draw(timestamp) {
             // Draw ocean background first
             if (oceanBackground) {
@@ -4972,6 +5934,14 @@
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
             
+            // Draw FPS counter if enabled
+            if (gameSettings.showFPS) {
+                ctx.fillStyle = '#00ff00';
+                ctx.font = 'bold 16px system-ui';
+                ctx.textAlign = 'right';
+                ctx.fillText(`FPS: ${currentFPS}`, canvas.width - 10, 20);
+            }
+            
             // Draw game mode elements (spikes, AI bots, targets, etc.)
             if (currentGameMode === 'spike_dodge') {
                 drawSpikes();
@@ -4979,7 +5949,7 @@
                 drawBombs();
             } else if (currentGameMode === 'target_break') {
                 drawTargets();
-            } else if (currentGameMode === 'training_1v1' || currentGameMode === 'training_2v2') {
+            } else if (currentGameMode === 'training') {
                 drawTrainingAI();
             }
             
@@ -5004,7 +5974,7 @@
                 ctx.textAlign = 'left';
                 ctx.fillText(`FreeForAll - Time: ${survivalTime}s`, 20, 40);
                 ctx.fillText(`Players Alive: ${aliveCount}`, 20, 70);
-            } else if ((currentGameMode === 'training_1v1' || currentGameMode === 'training_2v2') && !playerDead) {
+            } else if (currentGameMode === 'training' && !playerDead) {
                 const aliveAICount = trainingAIBots.filter(ai => !ai.dead).length;
                 const deadAICount = trainingAIBots.filter(ai => ai.dead).length;
                 const respawnTimeLeft = deadAICount > 0 && aliveAICount === 0 ? 
@@ -5013,11 +5983,11 @@
                 ctx.fillStyle = '#fff';
                 ctx.font = 'bold 24px system-ui';
                 ctx.textAlign = 'left';
-                ctx.fillText(`Training Mode: ${trainingMode}`, 20, 40);
-                ctx.fillText(`AI Bots: ${aliveAICount}`, 20, 70);
+                ctx.fillText(`Training Mode`, 20, 40);
+                ctx.fillText(`AI Bots: ${aliveAICount}/${trainingSettings.aiCount}`, 20, 70);
                 if (respawnTimeLeft > 0) {
                     ctx.fillStyle = '#ffaa00';
-                    ctx.fillText(`Respawn in: ${respawnTimeLeft}s`, 20, 100);
+                    ctx.fillText(`Resetting in: ${respawnTimeLeft}s`, 20, 100);
                 }
             } else if (currentGameMode === 'target_break' && !playerDead && activeTargets.length > 0) {
                 const remainingTargets = activeTargets.filter(t => !t.broken);
@@ -5046,8 +6016,18 @@
                     });
                 }
                 
+                // Draw aura (before bubble for glow effects)
+                if (peerId === localPlayerId) {
+                    drawAura(player.x, player.y, selectedAuraId);
+                }
+                
                 // Draw main bubble
                 drawBubble(player.x, player.y, player.scaleX, player.scaleY, player.rotation, 1, player.color, player.image);
+                
+                // Draw particle effects (after bubble)
+                if (peerId === localPlayerId) {
+                    drawParticles(player.x, player.y, selectedParticleId);
+                }
                 
                 // Draw velocity vector (only for local player if enabled)
                 if (peerId === localPlayerId && DEFAULT_SHOW_VELOCITY && (player.vx !== 0 || player.vy !== 0)) {
@@ -5244,6 +6224,35 @@
         
         let lastTime = 0;
         function gameLoop(timestamp) {
+            // FPS limiting
+            const now = timestamp || performance.now();
+            
+            // Initialize lastFrameTime on first call
+            if (lastFrameTime === 0) {
+                lastFrameTime = now;
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+            
+            const elapsed = now - lastFrameTime;
+            
+            if (targetFPS > 0 && elapsed < frameInterval) {
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+            
+            // Update lastFrameTime for next frame
+            lastFrameTime = now - (elapsed % frameInterval);
+            
+            // Calculate FPS - count rendered frames
+            fpsCounter++;
+            fpsTime += elapsed;
+            if (fpsTime >= 1000) {
+                currentFPS = Math.round((fpsCounter * 1000) / fpsTime);
+                fpsCounter = 0;
+                fpsTime = 0;
+            }
+            
             // Use timestamp from requestAnimationFrame, or calculate delta
             const time = timestamp || (lastTime += 16);
             const deltaTime = time - (lastTime || time);
@@ -5264,7 +6273,7 @@
             } else if (currentGameMode === 'freeforall') {
                 // Check for FreeForAll winner every frame
                 checkFreeForAllWinner();
-            } else if (currentGameMode === 'training_1v1' || currentGameMode === 'training_2v2') {
+            } else if (currentGameMode === 'training') {
                 updateTrainingMode(deltaTime);
             }
             
