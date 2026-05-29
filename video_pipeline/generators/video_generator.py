@@ -66,7 +66,7 @@ class VideoGenerator:
             "Content-Type": "application/json",
         }
         payload = {
-            "model_name": "kling-v1-5",
+            "model_name": "kling-v2-6",
             "prompt": concept.scene_description,
             "negative_prompt": "blurry, low quality, text, watermark, realistic photography",
             "cfg_scale": 0.5,
