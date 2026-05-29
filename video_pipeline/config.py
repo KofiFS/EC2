@@ -5,7 +5,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
-    # Anthropic
+    # Idea generation provider ("grok" or "claude")
+    IDEA_PROVIDER: str = os.getenv("IDEA_PROVIDER", "grok")
+
+    # xAI / Grok
+    XAI_API_KEY: str = os.getenv("XAI_API_KEY", "")
+    GROK_MODEL: str = os.getenv("GROK_MODEL", "grok-3")
+
+    # Anthropic / Claude (fallback idea provider)
     ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
     CLAUDE_MODEL: str = os.getenv("CLAUDE_MODEL", "claude-opus-4-7")
 
@@ -37,8 +44,10 @@ class Config:
 
     def validate(self) -> None:
         errors = []
-        if not self.ANTHROPIC_API_KEY:
-            errors.append("ANTHROPIC_API_KEY is required")
+        if self.IDEA_PROVIDER == "grok" and not self.XAI_API_KEY:
+            errors.append("XAI_API_KEY is required when IDEA_PROVIDER=grok")
+        if self.IDEA_PROVIDER == "claude" and not self.ANTHROPIC_API_KEY:
+            errors.append("ANTHROPIC_API_KEY is required when IDEA_PROVIDER=claude")
         if self.VIDEO_PROVIDER == "kling" and not (self.KLING_API_KEY and self.KLING_API_SECRET):
             errors.append("KLING_API_KEY and KLING_API_SECRET are required when VIDEO_PROVIDER=kling")
         if self.VIDEO_PROVIDER == "runway" and not self.RUNWAY_API_KEY:

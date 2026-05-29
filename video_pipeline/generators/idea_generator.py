@@ -1,10 +1,8 @@
-"""Phase 1 – Generate 10 absurdist video concepts via Claude."""
+"""Phase 1 – Generate absurdist video concepts via Grok (default) or Claude."""
 import json
 import logging
 import re
 from dataclasses import dataclass, field
-
-import anthropic
 
 from config import Config
 
@@ -77,7 +75,7 @@ class VideoConcept:
 class IdeaGenerator:
     def __init__(self, cfg: Config):
         self.cfg = cfg
-        self.client = anthropic.Anthropic(api_key=cfg.ANTHROPIC_API_KEY)
+        self.provider = cfg.IDEA_PROVIDER.lower()
 
     def generate(self, count: int = 10) -> list[VideoConcept]:
         """Generate `count` video concepts. Returns list of VideoConcept objects."""
@@ -85,52 +83,88 @@ class IdeaGenerator:
             logger.info("[DRY RUN] Returning stub concepts")
             return [self._stub_concept(i) for i in range(count)]
 
-        logger.info("Generating %d video concepts via Claude (%s)…", count, self.cfg.CLAUDE_MODEL)
+        if self.provider == "grok":
+            return self._generate_grok(count)
+        elif self.provider == "claude":
+            return self._generate_claude(count)
+        else:
+            raise ValueError(f"Unknown IDEA_PROVIDER: {self.provider!r} — use 'grok' or 'claude'")
 
-        user_prompt = f"""Generate exactly {count} interdimensional cable TV video concepts.
+    # ── Grok (xAI) ────────────────────────────────────────────────────────────
 
-Return ONLY a valid JSON array — no markdown, no commentary, just the raw JSON.
-Each element must have ALL of these keys:
-{json.dumps(IDEA_SCHEMA, indent=2)}
+    def _generate_grok(self, count: int) -> list[VideoConcept]:
+        from openai import OpenAI
+        client = OpenAI(api_key=self.cfg.XAI_API_KEY, base_url="https://api.x.ai/v1")
 
-Make each concept wildly different from the others. Range from cosmic horror to absurdist comedy to
-fake infomercials to alien nature documentaries. Keep it surreal but internally consistent."""
+        logger.info("Generating %d concepts via Grok (%s)…", count, self.cfg.GROK_MODEL)
+        response = client.chat.completions.create(
+            model=self.cfg.GROK_MODEL,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": self._user_prompt(count)},
+            ],
+            temperature=1.2,   # push Grok to be weirder
+            max_tokens=4096,
+            response_format={"type": "json_object"},
+        )
+        raw_text = response.choices[0].message.content.strip()
+        return self._parse_response(raw_text, count)
 
-        response = self.client.messages.create(
+    # ── Claude (Anthropic) ────────────────────────────────────────────────────
+
+    def _generate_claude(self, count: int) -> list[VideoConcept]:
+        import anthropic
+        client = anthropic.Anthropic(api_key=self.cfg.ANTHROPIC_API_KEY)
+
+        logger.info("Generating %d concepts via Claude (%s)…", count, self.cfg.CLAUDE_MODEL)
+        response = client.messages.create(
             model=self.cfg.CLAUDE_MODEL,
             max_tokens=4096,
             system=[
                 {
                     "type": "text",
                     "text": SYSTEM_PROMPT,
-                    # Cache the large static system prompt — saves tokens on repeated runs
                     "cache_control": {"type": "ephemeral"},
                 }
             ],
-            messages=[{"role": "user", "content": user_prompt}],
+            messages=[{"role": "user", "content": self._user_prompt(count)}],
+        )
+        raw_text = response.content[0].text.strip()
+        return self._parse_response(raw_text, count)
+
+    # ── Shared helpers ────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _user_prompt(count: int) -> str:
+        return (
+            f"Generate exactly {count} interdimensional cable TV video concepts.\n\n"
+            "Return ONLY a valid JSON object with a single key \"concepts\" containing an array.\n"
+            f"Each element must have ALL of these keys:\n{json.dumps(IDEA_SCHEMA, indent=2)}\n\n"
+            "Make each concept wildly different from the others. Range from cosmic horror to absurdist comedy to "
+            "fake infomercials to alien nature documentaries. Keep it surreal but internally consistent."
         )
 
-        raw_text = response.content[0].text.strip()
-        concepts = self._parse_response(raw_text, count)
-        logger.info("Generated %d concepts", len(concepts))
-        return concepts
-
     def _parse_response(self, text: str, expected: int) -> list[VideoConcept]:
-        # Strip any accidental markdown fences
         text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.MULTILINE)
         text = re.sub(r"\s*```$", "", text, flags=re.MULTILINE)
 
         try:
             data = json.loads(text)
         except json.JSONDecodeError as exc:
-            logger.error("Failed to parse Claude response as JSON: %s", exc)
+            logger.error("Failed to parse LLM response as JSON: %s", exc)
             logger.debug("Raw response: %s", text[:500])
             raise
 
+        # Accept both {"concepts": [...]} wrapper and bare array
+        if isinstance(data, dict):
+            data = data.get("concepts") or data.get("ideas") or next(
+                (v for v in data.values() if isinstance(v, list)), []
+            )
         if not isinstance(data, list):
             raise ValueError(f"Expected JSON array, got {type(data).__name__}")
 
         concepts = [VideoConcept.from_dict(item) for item in data[:expected]]
+        logger.info("Generated %d concepts via %s", len(concepts), self.provider)
         return concepts
 
     @staticmethod
