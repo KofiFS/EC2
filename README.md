@@ -1,4 +1,4 @@
-# EC2 Space Combat - Godot 4
+# Lightforce - Godot 4
 
 A 2D physics-based space combat game built in Godot 4.
 
@@ -23,7 +23,7 @@ A 2D physics-based space combat game built in Godot 4.
 ## Project Structure
 
 ```
-EC2_Godot/
+Lightforce/
 ├── project.godot           # Project configuration
 ├── scenes/
 │   ├── main.tscn          # Main game scene
