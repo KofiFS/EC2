@@ -1,0 +1,78 @@
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #0a0402;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Subtle scrollbar that matches the medieval theme */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0f0804;
+}
+::-webkit-scrollbar-thumb {
+  background: #5c2b0a;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #c9882a;
+}
+
+/* Dice roll entrance + tumble animation */
+@keyframes diceTumble {
+  0% {
+    transform: scale(0.3) rotate(-180deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.15) rotate(12deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+@keyframes overlayFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes critPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 30px rgba(232, 184, 75, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 60px rgba(232, 184, 75, 0.9);
+  }
+}
+
+@keyframes failShake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-6px);
+  }
+  75% {
+    transform: translateX(6px);
+  }
+}
